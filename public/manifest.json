@@ -1,0 +1,25 @@
+{
+  "name": "Scorecer — Football That Thinks With You",
+  "short_name": "Scorecer",
+  "description": "Sub-second live football scores, grounded AI Match Assistant, 9:16 highlight Stories, and Squad watch parties.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#050D08",
+  "theme_color": "#050D08",
+  "categories": ["sports", "entertainment", "social"],
+  "icons": [
+    {
+      "src": "/images/hero-goalnet.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/tactical-pitch.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
