@@ -6,10 +6,12 @@ import {
   AuthModalMode,
   CommentaryLanguage,
   CommentatorPersona,
+  DataFeedTierPhase,
   DeduplicatedStoryCluster,
   FanRewardItem,
   LiveMatch,
   MatchEvent,
+  MatchTelemetryState,
   MegathreadPost,
   MicroPrediction,
   NotificationFilters,
@@ -20,7 +22,9 @@ import {
   ShotPoint,
   SquadGroup,
   SquadMessage,
+  SquadSubChannel,
   TacticalShiftAlert,
+  ThemePreference,
   UILanguage,
   UserProfile,
   XGDataPoint,
@@ -89,6 +93,13 @@ import {
   parseInitialDeepLink,
   syncStateToUrl,
 } from '../services/deepLinkService';
+import {
+  buildMatchTelemetryState,
+  RevenueCatEntitlementState,
+  useAuthStore,
+  useEntitlementStore,
+  useUIPreferencesStore,
+} from '../stores/scorecerStores';
 
 interface RegistrationPayload {
   username: string;
@@ -134,7 +145,7 @@ interface ScorecerContextType {
   toggleNotificationFilter: (key: keyof NotificationFilters) => void;
   addFanScore: (points: number, reason?: string) => void;
   redeemReward: (reward: FanRewardItem) => boolean;
-  unlockPPVMatch: (matchId: string, usePoints: boolean) => boolean;
+  unlockPPVMatch: (matchId: string, usePoints?: boolean) => boolean;
   matches: LiveMatch[];
   selectedMatchId: string;
   setSelectedMatchId: (id: string) => void;
@@ -160,7 +171,7 @@ interface ScorecerContextType {
   activeSquadId: string;
   setActiveSquadId: (id: string) => void;
   squadMessages: SquadMessage[];
-  sendSquadMessage: (text: string, widget?: SharedLiveWidget) => void;
+  sendSquadMessage: (text: string, widget?: SharedLiveWidget, channel?: SquadSubChannel, isAiCoHost?: boolean) => void;
   shareWidgetToSquad: (widget: SharedLiveWidget) => void;
   megathreadPosts: MegathreadPost[];
   submitMegathreadPost: (text: string) => {
@@ -186,6 +197,32 @@ interface ScorecerContextType {
   isPwaInstallable: boolean;
   installPwaApp: () => Promise<void>;
   shareCurrentDeepLink: (override?: DeepLinkState) => Promise<string>;
+  // Boost Production Architectural Upgrades (Steps 1–8)
+  pureTacticalMode: boolean;
+  togglePureTacticalMode: (force?: boolean) => void;
+  activeTheme: ThemePreference;
+  setTheme: (theme: ThemePreference) => void;
+  matchTelemetryState: MatchTelemetryState;
+  dataFeedPhase: DataFeedTierPhase;
+  setDataFeedPhase: (phase: DataFeedTierPhase) => void;
+  heartbeatCountdownSec: number;
+  lane2SyncStatus: 'SYNCED_60FPS' | 'STREAMING_OPTA_MATRIX_2S';
+  isProvisionalAttribution: boolean;
+  setIsProvisionalAttribution: (val: boolean) => void;
+  entitlements: ReturnType<typeof useEntitlementStore>;
+  authStore: ReturnType<typeof useAuthStore>;
+  simulateMatchStatusChange: (
+    status: 'KICK_OFF' | 'HALFTIME' | 'SUSPENDED' | 'RESUMED' | 'FULL_TIME'
+  ) => void;
+  simulateMoneylineShift: (
+    homeProb: number,
+    drawProb: number,
+    awayProb: number
+  ) => void;
+  isStoreReadinessOpen: boolean;
+  setIsStoreReadinessOpen: (open: boolean) => void;
+  isPaywallOpen: boolean;
+  setIsPaywallOpen: (open: boolean) => void;
 }
 
 const ScorecerContext = createContext<ScorecerContextType | undefined>(undefined);
@@ -195,6 +232,10 @@ const LANG_STORAGE_KEY = 'scorecer_ui_lang_v1';
 
 export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const initialDeepLink = parseInitialDeepLink();
+
+  const authStore = useAuthStore();
+  const uiPrefsStore = useUIPreferencesStore();
+  const entitlementStore = useEntitlementStore();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>(
     initialDeepLink.tab || 'vision'
@@ -212,6 +253,14 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalMode, setAuthModalMode] = useState<AuthModalMode>('signup');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isStoreReadinessOpen, setIsStoreReadinessOpen] = useState<boolean>(false);
+  const [isPaywallOpen, setIsPaywallOpen] = useState<boolean>(false);
+
+  // Dual-Lane Telemetry Ingestion Engine State
+  const [dataFeedPhase, setDataFeedPhase] = useState<DataFeedTierPhase>('phase-3-enterprise');
+  const [heartbeatCountdownSec, setHeartbeatCountdownSec] = useState<number>(15);
+  const [lane2SyncStatus, setLane2SyncStatus] = useState<'SYNCED_60FPS' | 'STREAMING_OPTA_MATRIX_2S'>('SYNCED_60FPS');
+  const [isProvisionalAttribution, setIsProvisionalAttribution] = useState<boolean>(true);
 
   const [user, setUser] = useState<UserProfile>(() => {
     const activeSession = getActiveSession();
@@ -404,10 +453,11 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }, 4200);
   };
 
-  // Real-time sub-second WebSocket simulation engine
+  // Real-time sub-second WebSocket simulation engine + 15s Lane 1 Heartbeat
   useEffect(() => {
     if (!isLiveEngineRunning) return;
     const interval = setInterval(() => {
+      setHeartbeatCountdownSec((prev) => (prev <= 1 ? 15 : prev - 1));
       setMatches((prevMatches) =>
         prevMatches.map((m) => {
           if (m.status !== 'LIVE') return m;
@@ -454,12 +504,29 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const activeMatch = matches.find((m) => m.id === selectedMatchId) || matches[0];
 
+  const matchTelemetryState = buildMatchTelemetryState(
+    activeMatch,
+    matchEvents,
+    isProvisionalAttribution
+  );
+
   const liveRagSnapshot = buildLiveMatchRagContext(
     activeMatch,
     matchEvents,
     players,
     xgTimeline
   );
+
+  const togglePureTacticalMode = (force?: boolean) => {
+    uiPrefsStore.togglePureTacticalMode(force);
+    const nextVal =
+      typeof force === 'boolean' ? force : !uiPrefsStore.pureTacticalMode;
+    triggerToast(
+      nextVal
+        ? '🎯 Pure Tactical Mode ON — Social banter, FanScore gamification & O2O drawers hidden for zero-clutter analyst view.'
+        : '⚡ Full Super-App Mode Restored — Squads, FanScore Pick\'Em & O2O Match Hubs active.'
+    );
+  };
 
   const setSpoilerDelaySeconds = (delay: SpoilerDelayOption) => {
     setSpoilerDelaySecondsState(delay);
@@ -557,6 +624,12 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     setUser(res.account.profile);
     setSessionToken(res.token || null);
+    if (res.token) {
+      authStore.promoteGuestToAuthenticated(
+        res.account.profile,
+        res.token.jwt || res.token.signature
+      );
+    }
     setIsAuthModalOpen(false);
     triggerToast(
       uiLanguage === 'fr'
@@ -584,6 +657,12 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     setUser(res.account.profile);
     setSessionToken(res.token || null);
+    if (res.token) {
+      authStore.promoteGuestToAuthenticated(
+        res.account.profile,
+        res.token.jwt || res.token.signature
+      );
+    }
     setIsAuthModalOpen(false);
     triggerToast(
       uiLanguage === 'fr'
@@ -597,6 +676,10 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const res = await authenticateWithOAuthProvider(provider);
     setUser(res.account.profile);
     setSessionToken(res.token);
+    authStore.promoteGuestToAuthenticated(
+      res.account.profile,
+      res.token.jwt || res.token.signature
+    );
     setIsAuthModalOpen(false);
     triggerToast(
       uiLanguage === 'fr'
@@ -618,6 +701,7 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     clearActiveSession();
     setSessionToken(null);
     setUser((prev) => ({ ...prev, isRegistered: false }));
+    authStore.resetToGuestAccount();
     setIsAuthModalOpen(false);
     triggerToast(
       uiLanguage === 'fr'
@@ -633,7 +717,6 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (result.matches.length > 0) {
         setMatches((prev) => {
           const merged = [...result.matches];
-          // Keep initial matches accessible if not duplicated
           prev.forEach((m) => {
             if (!merged.some((nm) => nm.id === m.id) && merged.length < 8) {
               merged.push(m);
@@ -695,9 +778,14 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const toggleProStatus = () => {
     setUser((prev) => {
       const nextPro = !prev.isPro;
+      if (nextPro) {
+        entitlementStore.purchaseScorecerPro('IOS_STOREKIT_2');
+      } else {
+        entitlementStore.downgradeToFree();
+      }
       triggerToast(
         nextPro
-          ? 'Scorecer Pro Activated! Raw xG exports, zero sponsor tags & unlimited AI unlocked.'
+          ? 'Scorecer Pro ($4.99/mo) Activated via RevenueCat! Raw xG exports, zero sponsor tags & unlimited AI unlocked.'
           : 'Switched to Scorecer Standard Free Tier.'
       );
       return { ...prev, isPro: nextPro };
@@ -733,47 +821,44 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       ...prev,
       fanScore: prev.fanScore - reward.costPoints,
       redeemedRewards: [...prev.redeemedRewards, reward.id],
-      isPro: reward.id === 'rew-pro-week' ? true : prev.isPro,
     }));
-    triggerToast(`Redeemed "${reward.title}" for ${reward.costPoints} FanScore!`);
+    triggerToast(
+      `Redeemed Non-Monetary Digital Reward "${reward.title}" for ${reward.costPoints} FanScore! (App Store Guideline 5.3.2 Compliant)`
+    );
     return true;
   };
 
-  const unlockPPVMatch = (matchId: string, usePoints: boolean): boolean => {
+  const unlockPPVMatch = (matchId: string, _usePoints?: boolean): boolean => {
     const targetMatch = matches.find((m) => m.id === matchId);
     if (!targetMatch) return false;
-    if (user.unlockedPPVMatches.includes(matchId)) return true;
-
-    if (usePoints) {
-      if (user.fanScore < targetMatch.ppvPointsCost) {
-        triggerToast(`Need ${targetMatch.ppvPointsCost} FanScore to unlock this D2C PPV stream.`);
-        return false;
-      }
-      setUser((prev) => ({
-        ...prev,
-        fanScore: prev.fanScore - targetMatch.ppvPointsCost,
-        unlockedPPVMatches: [...prev.unlockedPPVMatches, matchId],
-      }));
-      triggerToast(
-        `Unlocked ${targetMatch.homeShort} vs ${targetMatch.awayShort} Live Stream with ${targetMatch.ppvPointsCost} FanScore!`
-      );
-      return true;
-    } else {
-      setUser((prev) => ({
-        ...prev,
-        unlockedPPVMatches: [...prev.unlockedPPVMatches, matchId],
-      }));
-      triggerToast(
-        `1-Click D2C PPV Stream Unlocked (${targetMatch.ppvPrice})! Enjoy 1080p60 zero-latency broadcast.`
-      );
+    if (
+      user.unlockedPPVMatches.includes(matchId) ||
+      entitlementStore.unlockedConsumableMatchIds.includes(matchId)
+    ) {
       return true;
     }
+
+    entitlementStore.purchaseConsumableMatchPass(matchId, 'IOS_STOREKIT_2');
+    setUser((prev) => ({
+      ...prev,
+      unlockedPPVMatches: [...prev.unlockedPPVMatches, matchId],
+    }));
+    triggerToast(
+      `1-Click D2C Match Pass Unlocked (${targetMatch.ppvPrice} Consumable IAP via StoreKit 2 / Play Billing)! Enjoy 1080p60 zero-latency broadcast.`
+    );
+    return true;
   };
 
   const simulateLiveGoalOrShift = (type: 'goal' | 'tactical-shift') => {
     const currentMin = activeMatch.minute;
+    setLane2SyncStatus('STREAMING_OPTA_MATRIX_2S');
+    setTimeout(() => {
+      setLane2SyncStatus('SYNCED_60FPS');
+    }, 2000);
+
     if (type === 'goal') {
       const xgBump = 0.48;
+      setIsProvisionalAttribution(true);
       setMatches((prev) =>
         prev.map((m) =>
           m.id === activeMatch.id
@@ -825,8 +910,12 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           type: 'goal',
           team: 'home',
           title: `GOAL! Bukayo Saka (${activeMatch.homeScore + 1}-${activeMatch.awayScore} ${activeMatch.homeTeam})`,
-          detail: `Sub-second 0.68s WebSocket push • +${xgBump} xG • 116 dB Roar Spike auto-clipped by CV.`,
+          detail: `Lane 1 (<200ms Scout WS) • +${xgBump} xG • 116 dB Roar Spike auto-clipped by CV.`,
           xgAdded: xgBump,
+          isProvisionalAttribution: true,
+          provisionalReason:
+            'Dispatched in 0.68s via Lane 1 Scout Feed; official Opta F24 deflection check pending.',
+          deliveryLane: 'LANE_1_SCOUT_SUB200MS',
         },
         ...prev,
       ]);
@@ -900,11 +989,80 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           team: 'home',
           title: `AI TACTICAL ALERT: ${activeMatch.homeTeam} shift to 3-2-4-1 Box Overload`,
           detail: 'Central progression +34% • Opposition high press neutralized.',
+          deliveryLane: 'LANE_2_OPTA_ASYNC_2S',
         },
         ...prev,
       ]);
       triggerToast(`🧠 AI Tactical Shift Alert (${currentMin}'): 3-2-4-1 Box Midfield detected!`);
     }
+  };
+
+  const simulateMatchStatusChange = (
+    newStatus: 'KICK_OFF' | 'HALFTIME' | 'SUSPENDED' | 'RESUMED' | 'FULL_TIME'
+  ) => {
+    const statusMap: Record<string, LiveMatch['status']> = {
+      KICK_OFF: 'LIVE',
+      HALFTIME: 'HT',
+      FULL_TIME: 'FT',
+      SUSPENDED: 'SUSPENDED',
+      RESUMED: 'LIVE',
+    };
+    const targetStatus = statusMap[newStatus] || 'LIVE';
+    setMatches((prev) =>
+      prev.map((m) =>
+        m.id === activeMatch.id
+          ? {
+              ...m,
+              status: targetStatus,
+            }
+          : m
+      )
+    );
+    setMatchEvents((prev) => [
+      {
+        id: `ev-status-${Date.now()}`,
+        minute: activeMatch.minute,
+        second: activeMatch.second,
+        type: 'tactical-shift',
+        team: 'home',
+        title: `MATCH STATUS: ${newStatus}`,
+        detail: `Lane 1 (<200ms Scout WS): Instant edge frame match_status_change -> ${newStatus}.`,
+        isProvisionalAttribution: false,
+      },
+      ...prev,
+    ]);
+    triggerToast(
+      uiLanguage === 'fr'
+        ? `⚡ Voie 1 (<200ms) : Statut de match changé en ${newStatus} !`
+        : `⚡ Scout Lane 1 (<200ms): Match status updated to ${newStatus}!`
+    );
+  };
+
+  const simulateMoneylineShift = (
+    homeProb: number,
+    drawProb: number,
+    awayProb: number
+  ) => {
+    setMatches((prev) =>
+      prev.map((m) =>
+        m.id === activeMatch.id
+          ? {
+              ...m,
+              winProbability: {
+                home: homeProb,
+                draw: drawProb,
+                away: awayProb,
+                aiReason: `Scout Lane 1 Moneyline Shift: Home ${homeProb}% | Draw ${drawProb}% | Away ${awayProb}% (Sub-second Edge Delta).`,
+              },
+            }
+          : m
+      )
+    );
+    triggerToast(
+      uiLanguage === 'fr'
+        ? `⚡ Voie 1 : Cotes 3-Way Moneyline actualisées (${homeProb}% / ${drawProb}% / ${awayProb}%) !`
+        : `⚡ Scout Lane 1: 3-Way Moneyline shifted (${homeProb}% / ${drawProb}% / ${awayProb}%)!`
+    );
   };
 
   const sendAIChatMessage = async (query: string, geminiApiKey?: string) => {
@@ -920,6 +1078,15 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       text: query,
     };
     const streamingMsgId = `ai-msg-${Date.now() + 1}`;
+    const ragPayloadObj = {
+      matchId: activeMatch.id,
+      window: `${Math.max(0, activeMatch.minute - 1)}:${String(activeMatch.second).padStart(2, '0')}–${nowStamp}`,
+      scoreline: `${activeMatch.homeShort} ${activeMatch.homeScore}-${activeMatch.awayScore} ${activeMatch.awayShort}`,
+      xgState: `${activeMatch.homeXG.toFixed(2)} vs ${activeMatch.awayXG.toFixed(2)}`,
+      ppda: `${activeMatch.homePPDA} vs ${activeMatch.awayPPDA}`,
+      fieldTiltHomePct: activeMatch.fieldTiltHome,
+      recentEvents: matchEvents.slice(0, 2).map((e) => `${e.minute}' ${e.title}`),
+    };
     const placeholderReply: AIChatMessage = {
       id: streamingMsgId,
       sender: 'scorecer-ai',
@@ -930,6 +1097,7 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       ],
       embeddedClipId: aiHighlights[0]?.id,
       tacticalDiagramType: 'overload-right',
+      ragSnapshotPayload: JSON.stringify(ragPayloadObj, null, 2),
     };
 
     setAiChatMessages((prev) => [...prev, userMsg, placeholderReply]);
@@ -972,6 +1140,7 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 ],
                 embeddedClipId: aiHighlights[0]?.id,
                 tacticalDiagramType: diagram,
+                ragSnapshotPayload: JSON.stringify(ragPayloadObj, null, 2),
               }
             : m
         )
@@ -981,19 +1150,39 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const sendSquadMessage = (text: string, widget?: SharedLiveWidget) => {
+  const sendSquadMessage = (
+    text: string,
+    widget?: SharedLiveWidget,
+    channel: SquadSubChannel = 'match-day-thread',
+    isAiCoHost = false
+  ) => {
     const nowStamp = `${activeMatch.minute}:${String(activeMatch.second).padStart(2, '0')}'`;
+    const enrichedWidget: SharedLiveWidget | undefined = widget
+      ? {
+          ...widget,
+          pointer: widget.pointer || {
+            widgetType: widget.widgetType || widget.type,
+            matchId: activeMatch.id,
+            sharedAtMinute: activeMatch.minute,
+          },
+        }
+      : undefined;
+
+    const targetChannel: SquadSubChannel = enrichedWidget ? 'pinned-widgets' : channel;
     const newMsg: SquadMessage = {
       id: `sq-msg-${Date.now()}`,
       squadId: activeSquadId,
-      author: user.username,
-      authorHandle: user.handle,
-      avatarColor: user.avatarColor,
+      channel: targetChannel,
+      subChannel: targetChannel,
+      author: isAiCoHost ? 'Scorecer AI Co-Host (Sonic-3.6)' : user.username,
+      authorHandle: isAiCoHost ? '@scorecer_ai_voice' : user.handle,
+      avatarColor: isAiCoHost ? '#00D4FF' : user.avatarColor,
       timestamp: nowStamp,
       text,
-      isPro: user.isPro,
-      widget,
-      reactions: [{ emoji: '🔥', count: 1 }],
+      isPro: isAiCoHost ? true : user.isPro,
+      isAiCoHost,
+      widget: enrichedWidget,
+      reactions: [{ emoji: isAiCoHost ? '🎙️' : '🔥', count: 1 }],
     };
     setSquadMessages((prev) => {
       const next = [...prev, newMsg];
@@ -1017,8 +1206,22 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const shareWidgetToSquad = (widget: SharedLiveWidget) => {
-    sendSquadMessage(`Shared live interactive ${widget.title} telemetry widget:`, widget);
-    triggerToast(`Dropped "${widget.title}" live widget into your Squad Watch Party chat!`);
+    const pointerWidget: SharedLiveWidget = {
+      ...widget,
+      pointer: {
+        widgetType: widget.widgetType || widget.type,
+        matchId: activeMatch.id,
+        sharedAtMinute: activeMatch.minute,
+      },
+    };
+    sendSquadMessage(
+      `Shared 60fps JSON pointer widget { widgetType: "${widget.widgetType || widget.type}", matchId: "${activeMatch.id}", sharedAtMinute: ${activeMatch.minute} }:`,
+      pointerWidget,
+      'match-day-thread'
+    );
+    triggerToast(
+      `Dropped 60fps "${widget.title}" JSON pointer into Squad Match Day Thread & Pinned Widgets!`
+    );
   };
 
   const submitMegathreadPost = (text: string) => {
@@ -1031,9 +1234,24 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       'buy token',
       'trash human',
       'kill',
+      'slur',
+      'racist',
+      '88',
+      '⚡⚡',
+    ];
+    const banterWhitelist = [
+      'bottlers',
+      'parked the bus',
+      'fraud watch',
+      'robbed by var',
+      'cooking',
+      'ghosted',
+      'farmers league',
+      'warra trophy',
     ];
     const lower = text.toLowerCase();
     const isToxic = toxicPatterns.some((pat) => lower.includes(pat));
+    const matchedBanter = banterWhitelist.find((term) => lower.includes(term));
 
     if (isToxic) {
       const blockedPost: MegathreadPost = {
@@ -1044,9 +1262,10 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         timestamp: `${activeMatch.minute}'`,
         text,
         moderationStatus: 'filtered-toxic',
+        nlpStage: 'STAGE_2_TOXICITY_SHIELD',
         nlpConfidence: 99.4,
         moderationReason:
-          'Intercepted by Scorecer NLP Guard: Personal abuse / spam detected (distinguished from healthy football banter).',
+          'Stage 2 Contextual Toxicity & Co-Opted Symbol Filter: Targeted abuse / spam / extremist dog-whistle quarantined (High-Alert Deficit -0.352 decay threshold active).',
         upvotes: 0,
       };
       setMegathreadPosts((prev) => [blockedPost, ...prev]);
@@ -1062,7 +1281,8 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       lower.includes('pivot') ||
       lower.includes('4-2-4') ||
       lower.includes('half-space') ||
-      lower.includes('tactic');
+      lower.includes('tactic') ||
+      lower.includes('ppda');
 
     const status: 'verified-analysis' | 'approved-banter' = isAnalytical
       ? 'verified-analysis'
@@ -1075,10 +1295,18 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       timestamp: `${activeMatch.minute}'`,
       text,
       moderationStatus: status,
-      nlpConfidence: 97.8,
+      nlpStage: 'STAGE_1_BANTER_WHITELIST',
+      banterIdiomMatched: matchedBanter
+        ? `"${matchedBanter}"`
+        : isAnalytical
+        ? 'Tactical Telemetry Lexicon'
+        : 'Passionate Match Reaction',
+      nlpConfidence: 98.2,
       moderationReason: isAnalytical
-        ? 'Verified Tactical Insight (+15 FanScore)'
-        : 'Approved Passionate Football Banter (+10 FanScore)',
+        ? 'Stage 1 Verified Tactical Insight (+15 FanScore)'
+        : matchedBanter
+        ? `Stage 1 Cultural Football Banter Whitelist ("${matchedBanter}") — VALID BANTER (+10 FanScore)`
+        : 'Stage 1 Approved Passionate Football Banter (+10 FanScore)',
       upvotes: 1,
     };
     setMegathreadPosts((prev) => [newPost, ...prev]);
@@ -1099,7 +1327,7 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           ? {
               ...p,
               userChoice: choice,
-              resolvedOutcome: choice, // Instant interactive gratification for demo
+              resolvedOutcome: choice,
             }
           : p
       )
@@ -1116,7 +1344,7 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       };
     });
     triggerToast(
-      `🎯 Prediction Locked & Won! +${target.pointsReward} FanScore added to your reputation profile.`
+      `🎯 Tactical Pick'Em Challenge Won! +${target.pointsReward} Non-Monetary FanScore added to your loyalty profile.`
     );
   };
 
@@ -1149,6 +1377,9 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       type: 'watch-party',
       city,
       distanceKm: 0.8,
+      distanceMiles: 0.5,
+      lat: 51.5588,
+      lon: -0.1072,
       venueName,
       address: `${venueName}, ${city} Central Hub`,
       dateTime: 'This Saturday • 19:30 Kickoff',
@@ -1250,6 +1481,25 @@ export const ScorecerProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isPwaInstallable,
         installPwaApp,
         shareCurrentDeepLink,
+        pureTacticalMode: uiPrefsStore.pureTacticalMode,
+        togglePureTacticalMode,
+        activeTheme: uiPrefsStore.theme,
+        setTheme: uiPrefsStore.setTheme,
+        matchTelemetryState,
+        dataFeedPhase,
+        setDataFeedPhase,
+        heartbeatCountdownSec,
+        lane2SyncStatus,
+        isProvisionalAttribution,
+        setIsProvisionalAttribution,
+        entitlements: entitlementStore,
+        authStore,
+        simulateMatchStatusChange,
+        simulateMoneylineShift,
+        isStoreReadinessOpen,
+        setIsStoreReadinessOpen,
+        isPaywallOpen,
+        setIsPaywallOpen,
       }}
     >
       {children}

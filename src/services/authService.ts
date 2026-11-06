@@ -24,6 +24,7 @@ export interface SessionTokenPayload {
   issuedAt: number;
   expiresAt: number;
   signature: string;
+  jwt?: string;
 }
 
 const ACCOUNTS_DB_KEY = 'scorecer_accounts_db_v2';
@@ -157,6 +158,7 @@ export async function issueSessionToken(
     issuedAt,
     expiresAt,
     signature,
+    jwt: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${signature}`,
   };
   try {
     localStorage.setItem(SESSION_TOKEN_KEY, JSON.stringify(token));

@@ -58,6 +58,7 @@ export const DiscoverHubView: React.FC = () => {
 
   const isFr = uiLanguage === 'fr';
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [selectedTier, setSelectedTier] = useState<string>('ALL');
   const [onlyMyClubs, setOnlyMyClubs] = useState<boolean>(false);
   const [expandedId, setExpandedId] = useState<string | null>('clust-1');
 
@@ -72,6 +73,9 @@ export const DiscoverHubView: React.FC = () => {
     if (selectedCategory !== 'ALL' && c.category !== selectedCategory) {
       return false;
     }
+    if (selectedTier !== 'ALL' && c.reliabilityTier !== selectedTier) {
+      return false;
+    }
     if (onlyMyClubs) {
       return c.clubsInvolved.some((club) =>
         user.favoriteClubs.some((fav) =>
@@ -81,6 +85,16 @@ export const DiscoverHubView: React.FC = () => {
     }
     return true;
   });
+
+  const getTierBadgeStyle = (tier?: string) => {
+    if (tier === 'Tier 1') {
+      return 'bg-[#B8FF01]/15 text-[#B8FF01] border-[#B8FF01]/40';
+    }
+    if (tier === 'Tier 2') {
+      return 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40';
+    }
+    return 'bg-amber-500/15 text-amber-300 border-amber-500/40';
+  };
 
   return (
     <div className="bg-[#050D08] text-slate-100">
@@ -99,7 +113,9 @@ export const DiscoverHubView: React.FC = () => {
         <div className="relative z-10 max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-end justify-between gap-8">
           <div className="max-w-2xl space-y-4">
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-[#B8FF01]">
-              {isFr ? 'EXPLORER · ZÉRO SPAM' : 'DISCOVER · ZERO FEED SPAM'}
+              {isFr
+                ? 'EXPLORER · TIERS DE FIABILITÉ NLP'
+                : 'DISCOVER · NLP SOURCE RELIABILITY TIERS'}
             </p>
             <h1 className="font-display text-3xl sm:text-5xl font-bold text-white tracking-tight leading-tight">
               {isFr
@@ -108,8 +124,8 @@ export const DiscoverHubView: React.FC = () => {
             </h1>
             <p className="text-base sm:text-lg text-slate-300 leading-relaxed">
               {isFr
-                ? 'Au lieu de cinq articles identiques sur la même rumeur mercato, notre IA regroupe les sources fiables en un seul récit clair.'
-                : 'Instead of five repetitive articles repeating the same transfer rumor, Scorecer groups global reports into one clean, verified storyline.'}
+                ? 'Au lieu de cinq articles identiques sur la même rumeur mercato, notre IA regroupe les sources en un seul récit vérifié avec son Tier de Fiabilité (Tier 1 Officiel, Tier 2 Journaliste Accrédité, Tier 3 Agrégateur).'
+                : 'Instead of five repetitive articles repeating the same transfer rumor, Scorecer groups global reports into one clean storyline with explicit Source Reliability Tiers (Tier 1, Tier 2, Tier 3).'}
             </p>
           </div>
 
@@ -134,32 +150,72 @@ export const DiscoverHubView: React.FC = () => {
       ===================================================================== */}
       <section className="py-16 lg:py-24 px-6">
         <div className="max-w-7xl mx-auto space-y-10">
-          {/* Category Tabs */}
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#162B1E] pb-5">
+          {/* Category & Source Reliability Tier Tabs */}
+          <div className="flex flex-col gap-4 border-b border-[#162B1E] pb-5">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-2">
+                {categories.map((cat) => {
+                  const active = selectedCategory === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCategory(cat.id)}
+                      className={`px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                        active
+                          ? 'bg-[#B8FF01] text-[#050D08] font-semibold'
+                          : 'bg-[#08140C] text-slate-300 border border-[#162B1E] hover:text-white'
+                      }`}
+                    >
+                      {isFr ? cat.fr : cat.en}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <span className="font-mono text-xs text-slate-400">
+                {isFr
+                  ? '16 articles redondants condensés en 3 récits vérifiés'
+                  : '16 redundant reports condensed into 3 verified timelines'}
+              </span>
+            </div>
+
+            {/* Source Reliability Tier Filter Pills */}
             <div className="flex flex-wrap items-center gap-2">
-              {categories.map((cat) => {
-                const active = selectedCategory === cat.id;
+              <span className="font-mono text-[11px] uppercase tracking-wider text-slate-400 mr-1">
+                {isFr ? 'Tier de Source :' : 'Source Reliability Tier:'}
+              </span>
+              {[
+                { id: 'ALL', label: isFr ? 'Tous les Tiers' : 'All Tiers' },
+                {
+                  id: 'Tier 1',
+                  label: 'Tier 1: Official Club / Broadcast',
+                },
+                {
+                  id: 'Tier 2',
+                  label: 'Tier 2: Verified Beat Reporter',
+                },
+                {
+                  id: 'Tier 3',
+                  label: 'Tier 3: Speculative Aggregator',
+                },
+              ].map((t) => {
+                const active = selectedTier === t.id;
                 return (
                   <button
-                    key={cat.id}
-                    onClick={() => setSelectedCategory(cat.id)}
-                    className={`px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    key={t.id}
+                    type="button"
+                    onClick={() => setSelectedTier(t.id)}
+                    className={`px-3 py-1.5 rounded-lg font-mono text-xs transition-all cursor-pointer border ${
                       active
-                        ? 'bg-[#B8FF01] text-[#050D08] font-semibold'
-                        : 'bg-[#08140C] text-slate-300 border border-[#162B1E] hover:text-white'
+                        ? 'bg-[#0B1A11] text-[#B8FF01] border-[#B8FF01] font-semibold'
+                        : 'bg-[#08140C] text-slate-300 border-[#162B1E] hover:border-[#244430]'
                     }`}
                   >
-                    {isFr ? cat.fr : cat.en}
+                    {t.label}
                   </button>
                 );
               })}
             </div>
-
-            <span className="font-mono text-xs text-slate-400">
-              {isFr
-                ? '16 articles redondants condensés en 3 récits vérifiés'
-                : '16 redundant reports condensed into 3 verified timelines'}
-            </span>
           </div>
 
           {/* Story List */}
@@ -171,6 +227,13 @@ export const DiscoverHubView: React.FC = () => {
               const catLabel = isFr && frData ? frData.category : cluster.category;
               const imgUrl = STORY_IMAGES[idx % STORY_IMAGES.length];
               const isExpanded = expandedId === cluster.id;
+              const tierLabel =
+                cluster.reliabilityLabel ||
+                (cluster.reliabilityTier === 'Tier 1'
+                  ? 'Tier 1: Official Club / Broadcast'
+                  : cluster.reliabilityTier === 'Tier 2'
+                  ? 'Tier 2: Verified Beat Reporter'
+                  : 'Tier 3: Speculative Aggregator');
 
               return (
                 <article
@@ -186,19 +249,26 @@ export const DiscoverHubView: React.FC = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#050D08] via-transparent to-[#050D08]/50" />
 
-                    <div className="absolute top-4 left-4 flex items-center gap-2">
+                    <div className="absolute top-4 left-4 right-4 flex flex-wrap items-center justify-between gap-2">
                       <span className="px-2.5 py-1 rounded-md bg-[#050D08]/85 backdrop-blur-md border border-[#1F3B2A] font-mono text-[11px] text-[#B8FF01]">
                         {catLabel}
+                      </span>
+                      <span
+                        className={`px-2.5 py-1 rounded-md backdrop-blur-md border font-mono text-[10px] font-semibold ${getTierBadgeStyle(
+                          cluster.reliabilityTier
+                        )}`}
+                      >
+                        {tierLabel}
                       </span>
                     </div>
 
                     <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-xs font-mono">
-                      <span className="inline-flex items-center gap-1.5 text-slate-200 bg-[#050D08]/80 px-2.5 py-1 rounded border border-[#1F3B2A]">
+                      <span className="inline-flex items-center gap-1.5 text-slate-200 bg-[#050D08]/80 px-2.5 py-1 rounded border border-[#1F3B2A] tabular-nums">
                         <Layers className="w-3.5 h-3.5 text-[#B8FF01]" />
                         {cluster.mergedArticlesCount}{' '}
                         {isFr ? 'articles fusionnés' : 'articles merged'}
                       </span>
-                      <span className="px-2.5 py-1 rounded bg-[#B8FF01] text-[#050D08] font-bold">
+                      <span className="px-2.5 py-1 rounded bg-[#B8FF01] text-[#050D08] font-bold tabular-nums">
                         {cluster.reliabilityScore}%{' '}
                         {isFr ? 'Fiabilité' : 'Verified'}
                       </span>
@@ -217,8 +287,17 @@ export const DiscoverHubView: React.FC = () => {
                             {club}
                           </span>
                         ))}
-                        <span className="text-xs font-mono text-slate-500 ml-auto">
-                          {cluster.updatedAgo}
+                        <span
+                          className={`text-[11px] font-mono px-2.5 py-0.5 rounded border ${getTierBadgeStyle(
+                            cluster.reliabilityTier
+                          )}`}
+                        >
+                          {tierLabel}
+                        </span>
+                        <span className="text-xs font-mono text-slate-400 ml-auto tabular-nums">
+                          {cluster.verifiedAtTimestamp
+                            ? `Verified ${cluster.verifiedAtTimestamp}`
+                            : cluster.updatedAgo}
                         </span>
                       </div>
 

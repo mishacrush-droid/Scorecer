@@ -3,6 +3,7 @@ import { ScorecerProvider, useScorecer } from './context/ScorecerContext';
 import { TopNavbar } from './components/layout/TopNavbar';
 import { LandingVisionView } from './components/promo/LandingVisionView';
 import { RegistrationModal } from './components/auth/RegistrationModal';
+import { StoreReadinessModal } from './components/compliance/StoreReadinessModal';
 import { ScorecerLogo } from './components/common/ScorecerLogo';
 import { CheckCircle2, ShieldCheck } from 'lucide-react';
 
@@ -45,8 +46,15 @@ const RouteLoadingFallback: React.FC<{ isFr: boolean }> = ({ isFr }) => (
 );
 
 const ScorecerMainShell: React.FC = () => {
-  const { activeTab, setActiveTab, uiLanguage, toastMessage, openAuthModal, user } =
-    useScorecer();
+  const {
+    activeTab,
+    setActiveTab,
+    uiLanguage,
+    toastMessage,
+    openAuthModal,
+    user,
+    setIsStoreReadinessOpen,
+  } = useScorecer();
   const isFr = uiLanguage === 'fr';
 
   return (
@@ -76,6 +84,9 @@ const ScorecerMainShell: React.FC = () => {
       {/* Registration & Sign In Modal */}
       <RegistrationModal />
 
+      {/* App Store & Google Play Launch Readiness + RevenueCat Paywall Modal */}
+      <StoreReadinessModal />
+
       {/* Clean Editorial Stadium Footer */}
       <footer className="bg-[#040A06] border-t border-[#162B1E] py-12 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
@@ -96,6 +107,9 @@ const ScorecerMainShell: React.FC = () => {
               <span>·</span>
               <span>{isFr ? '200+ Championnats Mondiaux' : '200+ Global Leagues'}</span>
             </div>
+            <p className="text-[11px] text-slate-500 leading-relaxed pt-1">
+              Guideline 5.3.2 Compliance: FanScore points are 100% free-to-play loyalty points with zero cash value and cannot be exchanged for real currency. Apple Inc. and Google LLC are not sponsors of, nor affiliated with, Scorecer rewards.
+            </p>
           </div>
 
           <div className="flex flex-wrap gap-2.5">
@@ -143,6 +157,12 @@ const ScorecerMainShell: React.FC = () => {
               className="px-3.5 py-2 rounded-lg bg-[#08140C] hover:bg-[#0E2215] text-xs text-slate-300 border border-[#162B1E] cursor-pointer"
             >
               {isFr ? 'Soirées Match' : 'Watch Parties'}
+            </button>
+            <button
+              onClick={() => setIsStoreReadinessOpen(true)}
+              className="px-3.5 py-2 rounded-lg bg-[#0B1A11] hover:bg-[#132A1C] text-xs text-[#00D4FF] border border-[#00D4FF]/40 font-mono font-bold cursor-pointer"
+            >
+              Store Launch Readiness & Paywall
             </button>
             <button
               onClick={() => {

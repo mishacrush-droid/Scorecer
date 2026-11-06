@@ -62,6 +62,8 @@ export const RegistrationModal: React.FC = () => {
     signOutUser,
     toggleNotificationFilter,
     toggleProStatus,
+    pureTacticalMode,
+    togglePureTacticalMode,
   } = useScorecer();
 
   const isFr = uiLanguage === 'fr';
@@ -903,6 +905,33 @@ export const RegistrationModal: React.FC = () => {
               </span>
             </div>
 
+            {/* Pure Tactical Mode Analyst Switch (Step 1) */}
+            <div className="p-3.5 rounded-xl bg-[#08140C] border border-[#00F59B]/30 flex items-center justify-between gap-3 text-xs">
+              <div>
+                <div className="font-semibold text-[#00F59B]">
+                  {isFr
+                    ? 'Mode Tactique Pur (Zéro encombrement social)'
+                    : 'Pure Tactical Mode (Zero-Clutter Analyst View)'}
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  {isFr
+                    ? 'Masque le chat social, la gamification FanScore et les modules O2O pour un écran 100% analytique.'
+                    : 'Hides social chat drawers, FanScore gamification & O2O widgets across the entire app.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => togglePureTacticalMode()}
+                className={`px-3.5 py-1.5 rounded-lg font-mono font-bold text-xs transition-all cursor-pointer ${
+                  pureTacticalMode
+                    ? 'bg-[#00F59B] text-[#050D08]'
+                    : 'bg-[#12261A] text-slate-300 border border-[#1E3B29]'
+                }`}
+              >
+                {pureTacticalMode ? 'ON' : 'OFF'}
+              </button>
+            </div>
+
             {/* Granular Match Alert Toggles */}
             <div className="space-y-2.5">
               <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-[#B8FF01]">
@@ -918,6 +947,7 @@ export const RegistrationModal: React.FC = () => {
                   [
                     { key: 'goals', en: 'Goals', fr: 'Buts' },
                     { key: 'redCards', en: 'Red Cards', fr: 'Cartons rouges' },
+                    { key: 'varReviews', en: 'VAR Reviews', fr: 'Arbitrage VAR' },
                     {
                       key: 'tacticalShifts',
                       en: 'Tactical Shifts',
@@ -927,7 +957,7 @@ export const RegistrationModal: React.FC = () => {
                     { key: 'fullTime', en: 'Full-Time', fr: 'Score final' },
                   ] as { key: keyof NotificationFilters; en: string; fr: string }[]
                 ).map((item) => {
-                  const active = user.notificationFilters[item.key];
+                  const active = Boolean(user.notificationFilters[item.key]);
                   return (
                     <button
                       key={item.key}

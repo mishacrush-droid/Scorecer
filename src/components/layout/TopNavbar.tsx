@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Share2, Download, Cloud } from 'lucide-react';
+import { Shield, Share2, Download, Cloud, Crosshair, ShieldCheck } from 'lucide-react';
 import { useScorecer } from '../../context/ScorecerContext';
 import { ActiveTab } from '../../types/scorecer';
 import { ScorecerLogo } from '../common/ScorecerLogo';
@@ -19,6 +19,9 @@ export const TopNavbar: React.FC = () => {
     bufferedAlerts,
     installPwaApp,
     shareCurrentDeepLink,
+    pureTacticalMode,
+    togglePureTacticalMode,
+    setIsStoreReadinessOpen,
   } = useScorecer();
 
   const isFr = uiLanguage === 'fr';
@@ -70,11 +73,37 @@ export const TopNavbar: React.FC = () => {
           })}
         </nav>
 
-        {/* Right: Spoiler Shield, Share Link, EN / FR Language Switcher, Sign In & Get Started */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        {/* Right: Pure Tactical Mode, Store Readiness, Spoiler Shield, Share Link, EN / FR Language Switcher, Sign In & Get Started */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Global Pure Tactical Mode Toggle (Step 1) */}
+          <button
+            onClick={() => togglePureTacticalMode()}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-[11px] font-mono font-bold transition-all cursor-pointer ${
+              pureTacticalMode
+                ? 'bg-[#00F59B] text-[#050D08] border-[#00F59B] shadow-[0_0_15px_rgba(0,245,155,0.4)]'
+                : 'bg-[#0B1A11] text-slate-300 border-[#1A3324] hover:border-[#00F59B]/50 hover:text-[#00F59B]'
+            }`}
+            title="Pure Tactical Mode: Hide all social banter, FanScore gamification & O2O widgets for a pure 60fps football analyst experience"
+          >
+            <Crosshair className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">
+              {pureTacticalMode ? 'Pure Tactical: ON' : 'Pure Tactical'}
+            </span>
+          </button>
+
+          {/* Store Launch Readiness & RevenueCat Modal Trigger (Steps 7 & 8) */}
+          <button
+            onClick={() => setIsStoreReadinessOpen(true)}
+            className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-[#0B1A11] hover:bg-[#132A1C] border border-[#00D4FF]/35 text-[11px] font-mono text-[#00D4FF] transition-colors cursor-pointer"
+            title="App Store & Google Play Launch Readiness + RevenueCat Paywall Inspector"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Store Ready</span>
+          </button>
+
           {/* Spoiler-Shield Stream Delay Selector */}
           <div
-            className="hidden xl:inline-flex items-center gap-1.5 rounded-md bg-[#0B1A11] border border-[#1A3324] px-2 py-1 text-[11px] font-mono"
+            className="hidden 2xl:inline-flex items-center gap-1.5 rounded-md bg-[#0B1A11] border border-[#1A3324] px-2 py-1 text-[11px] font-mono"
             title={
               isFr
                 ? 'Bouclier Anti-Spoiler : retardez les notifications de but selon le décalage de votre stream'
@@ -107,11 +136,11 @@ export const TopNavbar: React.FC = () => {
 
           {/* Cloud Realtime Sync Pill */}
           <div
-            className="hidden lg:inline-flex items-center gap-1.5 rounded-md bg-[#0B1A11] border border-[#1A3324] px-2.5 py-1 text-[11px] font-mono text-slate-300"
+            className="hidden xl:inline-flex items-center gap-1.5 rounded-md bg-[#0B1A11] border border-[#1A3324] px-2.5 py-1 text-[11px] font-mono text-slate-300"
             title={`${cloudTelemetry.providerLabel} · Last synced ${cloudTelemetry.lastSyncedAt}`}
           >
             <Cloud className="w-3.5 h-3.5 text-[#B8FF01]" />
-            <span className="text-[#B8FF01] font-semibold">
+            <span className="text-[#B8FF01] font-semibold tabular-nums">
               {cloudTelemetry.latencyMs}ms
             </span>
           </div>
@@ -174,9 +203,11 @@ export const TopNavbar: React.FC = () => {
             >
               <span className="w-2 h-2 rounded-full bg-[#B8FF01]" />
               <span>{user.username}</span>
-              <span className="font-mono text-[#B8FF01] font-semibold">
-                {user.fanScore} PTS
-              </span>
+              {!pureTacticalMode && (
+                <span className="font-mono text-[#B8FF01] font-semibold tabular-nums">
+                  {user.fanScore} PTS
+                </span>
+              )}
             </button>
           ) : (
             <>

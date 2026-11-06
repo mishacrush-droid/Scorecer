@@ -5,6 +5,7 @@ import {
   Calendar,
   Check,
   CheckCircle2,
+  Crosshair,
   Lock,
   MapPin,
   Navigation,
@@ -76,13 +77,17 @@ export const O2OLocalNetworkView: React.FC = () => {
     applyAsCertifiedHost,
     addFanScore,
     setActiveTab,
+    pureTacticalMode,
+    togglePureTacticalMode,
   } = useScorecer();
 
   const isFr = uiLanguage === 'fr';
 
   const [selectedCategory, setSelectedCategory] =
     useState<CategoryFilter>('all');
-  const [searchRadiusKm, setSearchRadiusKm] = useState<number>(10);
+  const [searchRadiusMiles, setSearchRadiusMiles] = useState<number>(10);
+  const [showPostgisInspector, setShowPostgisInspector] =
+    useState<boolean>(true);
   const [checkedInIds, setCheckedInIds] = useState<string[]>([]);
 
   // Certified Host Inline Form State
@@ -95,9 +100,13 @@ export const O2OLocalNetworkView: React.FC = () => {
   );
   const [justPublished, setJustPublished] = useState<boolean>(false);
 
+  const radiusMeters = Math.round(searchRadiusMiles * 1609.34);
+
   const filteredEvents = o2oEvents.filter((ev) => {
     if (selectedCategory !== 'all' && ev.type !== selectedCategory) return false;
-    if (ev.distanceKm > searchRadiusKm) return false;
+    const evMiles =
+      ev.distanceMiles ?? Number((ev.distanceKm * 0.621371).toFixed(1));
+    if (evMiles > searchRadiusMiles) return false;
     return true;
   });
 
@@ -145,6 +154,24 @@ export const O2OLocalNetworkView: React.FC = () => {
 
   return (
     <div className="bg-[#050D08] text-slate-100">
+      {/* Step 1: Pure Tactical Mode Collapse Notice */}
+      {pureTacticalMode && (
+        <div className="bg-[#00F59B]/10 border-b border-[#00F59B]/30 px-6 py-3">
+          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-[#00F59B]">
+            <span className="flex items-center gap-2">
+              <Crosshair className="w-4 h-4 shrink-0" />
+              <strong>PURE TACTICAL MODE ACTIVE</strong> — Hyper-Local O2O venue discovery and watch parties are collapsed to maintain a distraction-free match analytics experience.
+            </span>
+            <button
+              onClick={() => togglePureTacticalMode(false)}
+              className="px-3 py-1 rounded bg-[#00F59B] text-[#050D08] font-bold text-xs cursor-pointer hover:bg-[#00d685]"
+            >
+              Disable Pure Tactical
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* =====================================================================
           HERO HEADER — Backed by /images/squads-pub.jpg & /images/wet-turf.jpg
       ===================================================================== */}
@@ -245,19 +272,46 @@ export const O2OLocalNetworkView: React.FC = () => {
       </section>
 
       {/* =====================================================================
-          01 · NEARBY WATCH PARTIES & PICKUP GAMES
+          01 · NEARBY WATCH PARTIES & PICKUP GAMES (POSTGRESQL POSTGIS)
       ===================================================================== */}
       <section
         id="section-nearby-events"
         className="border-b border-[#162B1E] py-16 lg:py-20 px-6"
       >
         <div className="max-w-7xl mx-auto space-y-10">
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+          {pureTacticalMode ? (
+            <div className="rounded-2xl bg-[#08140C] border border-[#00F59B]/30 p-8 text-center space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#00F59B]/15 border border-[#00F59B]/40 text-[#00F59B] mx-auto flex items-center justify-center">
+                <Crosshair className="w-6 h-6" />
+              </div>
+              <h3 className="font-display font-bold text-xl text-white">
+                {isFr
+                  ? 'Réseau O2O & Soirées Match Masqués en Mode Pur Tactique'
+                  : 'Hyper-Local O2O Discovery & Watch Parties Collapsed in Pure Tactical Mode'}
+              </h3>
+              <p className="text-sm text-slate-400 max-w-lg mx-auto leading-relaxed">
+                {isFr
+                  ? 'La découverte de lieux, les matchs de foot à 5/7 et les pubs partenaires sont masqués pour offrir une expérience 100% dédiée aux statistiques tactiques de match.'
+                  : 'Nearby pub gatherings, certified watch parties, and pickup football discovery are collapsed so purist supporters experience a distraction-free statistical Match Center.'}
+              </p>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => togglePureTacticalMode(false)}
+                  className="px-4 py-2 rounded-xl bg-[#00F59B] text-[#050D08] font-bold text-xs cursor-pointer hover:bg-[#00d685]"
+                >
+                  {isFr ? 'Désactiver le Mode Pur Tactique' : 'Disable Pure Tactical Mode'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
             <div className="space-y-3 max-w-2xl">
               <p className="font-mono text-xs uppercase tracking-[0.2em] text-[#B8FF01]">
                 {isFr
-                  ? '01 · SOIRÉES MATCH & FOOT À 5/7 À PROXIMITÉ'
-                  : '01 · NEARBY WATCH PARTIES & PICKUP GAMES'}
+                  ? '01 · SOIRÉES MATCH & FOOT À 5/7 À PROXIMITÉ (POSTGIS)'
+                  : '01 · NEARBY WATCH PARTIES & PICKUP GAMES (POSTGIS)'}
               </p>
               <h2 className="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight">
                 {isFr
@@ -266,33 +320,80 @@ export const O2OLocalNetworkView: React.FC = () => {
               </h2>
               <p className="text-base text-slate-400 leading-relaxed">
                 {isFr
-                  ? 'Filtrez par soirées match certifiées, terrains de foot à 5 & 7 ou pubs de supporters. Réservez votre place en 1 clic.'
-                  : 'Filter by certified fan watch parties, floodlit 5v5/7v7 pickup games, or affiliated supporter pubs. Lock your spot with 1-click RSVP.'}
+                  ? 'Filtrez par rayon spatial (1 mi, 5 mi, 10 mi, 25 mi) propulsé par PostgreSQL PostGIS et réservez votre place en 1 clic.'
+                  : 'Filter by spatial radius (1 mi, 5 mi, 10 mi, 25 mi) powered by PostgreSQL PostGIS GiST indexing and lock your spot with 1-click RSVP.'}
               </p>
             </div>
 
-            {/* Distance Radius Selector */}
-            <div className="flex items-center gap-2 bg-[#08140C] border border-[#162B1E] rounded-lg p-2 self-start lg:self-end">
+            {/* Distance Radius Selector in Miles (1 mi, 5 mi, 10 mi, 25 mi) */}
+            <div className="flex flex-wrap items-center gap-2 bg-[#08140C] border border-[#162B1E] rounded-lg p-2 self-start lg:self-end">
               <Navigation className="w-3.5 h-3.5 text-[#B8FF01] ml-1.5" />
               <span className="font-mono text-xs text-slate-400 mr-1">
-                {isFr ? 'Rayon :' : 'Radius:'}
+                {isFr ? 'Rayon PostGIS :' : 'PostGIS Radius:'}
               </span>
-              {[3, 5, 10].map((km) => (
+              {[1, 5, 10, 25].map((mi) => (
                 <button
-                  key={km}
+                  key={mi}
                   type="button"
-                  onClick={() => setSearchRadiusKm(km)}
-                  className={`px-3 py-1 rounded-md font-mono text-xs transition-colors cursor-pointer ${
-                    searchRadiusKm === km
+                  onClick={() => setSearchRadiusMiles(mi)}
+                  className={`px-3 py-1 rounded-md font-mono text-xs transition-colors cursor-pointer tabular-nums ${
+                    searchRadiusMiles === mi
                       ? 'bg-[#B8FF01] text-[#050D08] font-semibold'
                       : 'text-slate-300 hover:text-white'
                   }`}
                 >
-                  {km} km
+                  {mi} mi
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={() => setShowPostgisInspector(!showPostgisInspector)}
+                className="px-2.5 py-1 rounded-md bg-[#050D08] border border-[#1F3B2A] font-mono text-[11px] text-cyan-400 hover:border-cyan-400/50 cursor-pointer"
+              >
+                {showPostgisInspector ? 'Hide SQL' : 'Inspect PostGIS SQL'}
+              </button>
             </div>
           </div>
+
+          {/* Interactive PostGIS Spatial Query Inspector */}
+          {showPostgisInspector && (
+            <div className="rounded-xl bg-[#08140C] border border-cyan-500/30 p-5 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                  <span className="font-mono text-xs uppercase tracking-wider text-cyan-300 font-semibold">
+                    {isFr
+                      ? 'INSPECTEUR DE REQUÊTE SPATIALE POSTGRESQL POSTGIS (INDEX GIST)'
+                      : 'POSTGIS SPATIAL QUERY INSPECTOR · GIST-INDEXED GEOGRAPHY'}
+                  </span>
+                </div>
+                <span className="font-mono text-[11px] text-[#B8FF01] tabular-nums">
+                  $radius_meters = {radiusMeters}m ({searchRadiusMiles} mi) ·{' '}
+                  {filteredEvents.length} {isFr ? 'résultats' : 'rows matched'}
+                </span>
+              </div>
+
+              <pre className="p-3.5 rounded-lg bg-[#050D08] border border-[#162B1E] font-mono text-xs text-cyan-200 overflow-x-auto leading-relaxed">
+{`-- PostGIS Spatial Index & Meter-Accurate Proximity Query (Scalable to 1,000,000+ Locations)
+CREATE INDEX IF NOT EXISTS idx_o2o_venues_geom ON o2o_watch_parties USING GIST (geom);
+
+WITH user_origin AS (
+  SELECT ST_SetSRID(ST_MakePoint(-0.1062, 51.5642), 4326)::geography AS geog
+)
+SELECT 
+  v.venue_id,
+  v.venue_name,
+  v.event_type, -- 'CERTIFIED_WATCH_PARTY' | 'PICKUP_5V5' | 'PICKUP_7V7'
+  v.is_certified_host,
+  ROUND((ST_Distance(v.geom::geography, u.geog) / 1609.34)::numeric, 2) AS distance_miles
+FROM o2o_watch_parties v
+CROSS JOIN user_origin u
+WHERE ST_DWithin(v.geom::geography, u.geog, ${radiusMeters}) -- e.g. ${radiusMeters}m for ${searchRadiusMiles} miles
+ORDER BY distance_miles ASC
+LIMIT 25;`}
+              </pre>
+            </div>
+          )}
 
           {/* Category Filter Bar */}
           <div className="flex flex-wrap items-center gap-2.5">
@@ -367,6 +468,9 @@ export const O2OLocalNetworkView: React.FC = () => {
                 Math.round((ev.attendeesCount / ev.maxCapacity) * 100)
               );
               const isCheckedIn = checkedInIds.includes(ev.id);
+              const evMiles =
+                ev.distanceMiles ??
+                Number((ev.distanceKm * 0.621371).toFixed(1));
 
               return (
                 <div
@@ -393,8 +497,8 @@ export const O2OLocalNetworkView: React.FC = () => {
                           <span>{meta.label}</span>
                         </span>
 
-                        <span className="px-2.5 py-1 rounded-md bg-[#050D08]/85 backdrop-blur-md border border-[#162B1E] font-mono text-[11px] text-white">
-                          {ev.distanceKm} km
+                        <span className="px-2.5 py-1 rounded-md bg-[#050D08]/85 backdrop-blur-md border border-[#162B1E] font-mono text-[11px] text-white tabular-nums">
+                          {evMiles} mi ({ev.distanceKm} km)
                         </span>
                       </div>
 
@@ -539,14 +643,17 @@ export const O2OLocalNetworkView: React.FC = () => {
               );
             })}
           </div>
+            </>
+          )}
         </div>
       </section>
 
       {/* =====================================================================
           02 · BECOME A CERTIFIED HOST & TRANSPARENT GDPR GEOLOCATION OPT-IN
       ===================================================================== */}
-      <section id="section-certified-host" className="py-16 lg:py-20 px-6">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+      {!pureTacticalMode && (
+        <section id="section-certified-host" className="py-16 lg:py-20 px-6">
+          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           {/* Left Column (5 cols): Editorial Context + GDPR Geolocation Opt-In Switch */}
           <div className="lg:col-span-5 space-y-6">
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-[#B8FF01]">
@@ -746,6 +853,7 @@ export const O2OLocalNetworkView: React.FC = () => {
           </div>
         </div>
       </section>
+      )}
     </div>
   );
 };

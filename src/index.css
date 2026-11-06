@@ -2,10 +2,17 @@
 
 @layer base {
   :root {
-    --font-display: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+    --font-display: 'Space Grotesk', 'Outfit', system-ui, -apple-system, sans-serif;
     --font-wide: 'Unbounded', 'Space Grotesk', sans-serif;
-    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-sans: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+    --surface-obsidian: #070A0E;
+    --surface-island: #000000;
+    --surface-slate: #111722;
+    --accent-emerald: #00F59B;
+    --accent-cyan: #00D4FF;
+    --accent-amber: #FFB800;
+    --accent-crimson: #FF3B5C;
   }
 
   body {
@@ -21,10 +28,12 @@
 
   .font-wide {
     font-family: var(--font-wide);
+    font-variant-numeric: tabular-nums;
   }
 
-  .font-mono {
+  .font-mono, .tabular-nums {
     font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
   }
 }
 

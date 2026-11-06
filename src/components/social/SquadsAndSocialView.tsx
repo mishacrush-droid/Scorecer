@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import {
   Award,
+  Bot,
   Check,
   CheckCircle2,
+  Code2,
+  Crosshair,
   Film,
   Flame,
   Gift,
@@ -10,6 +13,7 @@ import {
   MessageSquare,
   Mic,
   MicOff,
+  Pin,
   Radio,
   Send,
   ShieldAlert,
@@ -17,12 +21,15 @@ import {
   Sparkles,
   ThumbsUp,
   TrendingUp,
-  Users,
   Volume2,
   Zap,
 } from 'lucide-react';
 import { useScorecer } from '../../context/ScorecerContext';
-import { SharedLiveWidget, SquadMessage } from '../../types/scorecer';
+import {
+  SharedLiveWidget,
+  SquadMessage,
+  SquadSubChannel,
+} from '../../types/scorecer';
 
 const SQUAD_TRANSLATIONS: Record<
   string,
@@ -58,6 +65,7 @@ const FALLBACK_SQUAD_MESSAGES: Record<string, SquadMessage[]> = {
     {
       id: 'sq-ucl-1',
       squadId: 'squad-ucl-nerds',
+      subChannel: 'match-day-thread',
       author: 'Luka V.',
       authorHandle: '@luka_xthreat',
       avatarColor: '#B8FF01',
@@ -66,11 +74,17 @@ const FALLBACK_SQUAD_MESSAGES: Record<string, SquadMessage[]> = {
       isPro: true,
       widget: {
         type: 'win-prob',
+        widgetType: 'win-prob',
         title: 'Live Win Probability',
         subtitle: 'Home 64% · Draw 22% · Away 14%',
         metricPrimary: '64% ARS',
         metricSecondary: '+16% post-Havertz Goal',
         accentColor: '#B8FF01',
+        pointer: {
+          widgetType: 'win-prob',
+          matchId: 'ucl-qf-ars-rma-2026',
+          sharedAtMinute: 71,
+        },
       },
       reactions: [
         { emoji: '🧠', count: 14 },
@@ -82,6 +96,7 @@ const FALLBACK_SQUAD_MESSAGES: Record<string, SquadMessage[]> = {
     {
       id: 'sq-mad-1',
       squadId: 'squad-madridistas',
+      subChannel: 'match-day-thread',
       author: 'Carlos M.',
       authorHandle: '@carlos_bernabeu',
       avatarColor: '#38BDF8',
@@ -90,11 +105,17 @@ const FALLBACK_SQUAD_MESSAGES: Record<string, SquadMessage[]> = {
       isPro: false,
       widget: {
         type: 'ai-highlight',
+        widgetType: 'ai-highlight',
         title: "39' Mbappe 34.8 km/h Transition Goal",
         subtitle: 'Auto-Clipped Highlight · 109 dB Roar',
         metricPrimary: '0.51 xG',
         metricSecondary: '0:27 Clip Ready',
         accentColor: '#B8FF01',
+        pointer: {
+          widgetType: 'ai-highlight',
+          matchId: 'ucl-qf-ars-rma-2026',
+          sharedAtMinute: 73,
+        },
       },
       reactions: [
         { emoji: '🔥', count: 19 },
@@ -109,14 +130,14 @@ const PREDICTION_FR: Record<
   { matchMinute: string; question: string; contextMetric: string }
 > = {
   'pred-1': {
-    matchMinute: "ARRÊT DE JEU · 79'",
+    matchMinute: "DÉFI TACTIQUE · 79'",
     question:
       'Le coup franc de 22m de Bukayo Saka côté droit sera-t-il cadré ?',
     contextMetric:
       'Contexte IA : Saka cadre 41% de ses coups francs directs depuis la Zone 15 ; taux d’arrêt de Courtois à 82%.',
   },
   'pred-2': {
-    matchMinute: "5 PROCHAINES MINUTES · 80'-85'",
+    matchMinute: "FENÊTRE 5 MIN · 80'-85'",
     question:
       'Le Real Madrid va-t-il générer plus de 0.25 Expected Goals (xG) avant la 85e minute ?',
     contextMetric:
@@ -135,29 +156,29 @@ const REWARD_FR: Record<
   string,
   { title: string; description: string; badgeText: string }
 > = {
-  'rew-ppv-pass': {
-    title: 'Pass Stream Direct Match Unique (PPV)',
+  'rew-neon-badge': {
+    title: 'Cadre d’Avatar « Oracle xG » Volt Neon',
     description:
-      'Débloquez un match en direct 1080p60 (Serie A, MLS Next Pro ou club partenaire) avec vos points.',
-    badgeText: 'POPULAIRE',
+      'Bordure d’avatar numérique exclusive visible dans tous les Squads privés et salons publics de match.',
+    badgeText: 'BADGE PROFIL',
   },
-  'rew-pro-week': {
-    title: 'Accès Scorecer Pro Tactique — 7 Jours',
+  'rew-commentator-pack': {
+    title: 'Pack Voix IA « Légende du Stade » (Sonic-3.6)',
     description:
-      'Zéro mention sponsor, export des données xG et questions illimitées à l’Assistant Match IA.',
-    badgeText: 'EXPERT',
+      'Débloquez des profils vocaux Cartesia Sonic-3.6 supplémentaires pour vos résumés tactiques d’après-match.',
+    badgeText: 'PACK AUDIO',
   },
-  'rew-badge-oracle': {
-    title: 'Badge de Squad « Oracle xG »',
+  'rew-camera-angle': {
+    title: 'Vue Caméra Tactique Panoramique « All-22 »',
     description:
-      'Distinction exclusive visible sur votre profil dans tous les Squads et salons publics de match.',
-    badgeText: 'ÉDITION LIMITÉE',
+      'Activez la vue radar tactique haute altitude et les vecteurs de passes sur le terrain 2D.',
+    badgeText: 'VUE TACTIQUE',
   },
-  'rew-o2o-drink': {
-    title: 'Accès Prioritaire Soirée Match & Avantage Pub',
+  'rew-sponsor-raffle': {
+    title: 'Tirage Fidélité Maillot Officiel (100% Gratuit)',
     description:
-      'Table réservée et boisson offerte dans les pubs partenaires certifiés Scorecer.',
-    badgeText: 'SOIRÉE PUB',
+      'Participation fidélité 100% gratuite au tirage mensuel de maillots officiels (sans valeur monétaire).',
+    badgeText: 'FIDÉLITÉ GRATUITE',
   },
 };
 
@@ -191,13 +212,20 @@ export const SquadsAndSocialView: React.FC = () => {
     addFanScore,
     setActiveTab,
     triggerToast,
+    pureTacticalMode,
+    togglePureTacticalMode,
   } = useScorecer();
 
   const isFr = uiLanguage === 'fr';
 
-  // Watch Party Voice State
+  // Watch Party Voice State & LiveKit AI Co-Host
   const [inVoiceChannel, setInVoiceChannel] = useState<boolean>(true);
   const [isMicMuted, setIsMicMuted] = useState<boolean>(false);
+  const [aiCoHostActive, setAiCoHostActive] = useState<boolean>(false);
+
+  // 3-Channel Squads Architecture State
+  const [activeSubChannel, setActiveSubChannel] =
+    useState<SquadSubChannel>('match-day-thread');
 
   // Squad Chat State
   const [chatInput, setChatInput] = useState<string>('');
@@ -207,6 +235,9 @@ export const SquadsAndSocialView: React.FC = () => {
 
   // Megathread Moderation State
   const [megaInput, setMegaInput] = useState<string>('');
+  const [overrideShieldMode, setOverrideShieldMode] = useState<
+    'auto' | 'standard' | 'deficit'
+  >('auto');
   const [lastModerationResult, setLastModerationResult] = useState<{
     status: 'approved-banter' | 'verified-analysis' | 'filtered-toxic';
     reason: string;
@@ -220,10 +251,29 @@ export const SquadsAndSocialView: React.FC = () => {
   const directMessages = squadMessages.filter(
     (m) => m.squadId === activeSquadId
   );
-  const displayedSquadMessages =
+  const baseSquadMessages =
     directMessages.length > 0
       ? directMessages
       : FALLBACK_SQUAD_MESSAGES[activeSquadId] || squadMessages;
+
+  const displayedSquadMessages = baseSquadMessages.filter((m) => {
+    const channelKey = m.subChannel || m.channel || 'match-day-thread';
+    if (activeSubChannel === 'pinned-widgets') {
+      return Boolean(m.widget) || channelKey === 'pinned-widgets';
+    }
+    if (activeSubChannel === 'general-banter') {
+      return channelKey === 'general-banter';
+    }
+    // 'match-day-thread'
+    return channelKey === 'match-day-thread' || channelKey === 'match-day';
+  });
+
+  const isDeficitShieldMode =
+    overrideShieldMode === 'deficit'
+      ? true
+      : overrideShieldMode === 'standard'
+      ? false
+      : activeMatch.homeScore !== activeMatch.awayScore;
 
   const topPlayer =
     [...players].sort((a, b) => b.rating - a.rating)[0] || {
@@ -234,10 +284,36 @@ export const SquadsAndSocialView: React.FC = () => {
       xa: 0.62,
     };
 
+  const handleInviteAiCoHost = () => {
+    const next = !aiCoHostActive;
+    setAiCoHostActive(next);
+    if (next) {
+      sendSquadMessage(
+        isFr
+          ? `🎙️ [Co-Hôte Vocal IA LiveKit Connecté · $0.01/min] Point tactique à la ${activeMatch.minute}' : Arsenal mène ${activeMatch.homeScore}-${activeMatch.awayScore} (${activeMatch.homeXG.toFixed(2)} vs ${activeMatch.awayXG.toFixed(2)} xG). La note live de ${topPlayer.name} est à ${topPlayer.rating.toFixed(1)}.`
+          : `🎙️ [LiveKit AI Voice Co-Host Joined · $0.01/min] Live ${activeMatch.minute}' briefing: ${activeMatch.homeShort} leads ${activeMatch.homeScore}-${activeMatch.awayScore} (${activeMatch.homeXG.toFixed(2)} vs ${activeMatch.awayXG.toFixed(2)} xG). ${topPlayer.name} leads the pitch at ${topPlayer.rating.toFixed(1)} rating.`,
+        undefined,
+        activeSubChannel,
+        true
+      );
+      triggerToast(
+        isFr
+          ? 'Co-Hôte Vocal IA Scorecer connecté au salon LiveKit SFU !'
+          : 'Scorecer AI Voice Co-Host joined the LiveKit SFU room!'
+      );
+    } else {
+      triggerToast(
+        isFr
+          ? 'Co-Hôte Vocal IA déconnecté.'
+          : 'Scorecer AI Voice Co-Host disconnected.'
+      );
+    }
+  };
+
   const handleSendSquadChat = (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
-    sendSquadMessage(chatInput.trim());
+    sendSquadMessage(chatInput.trim(), undefined, activeSubChannel);
     setChatInput('');
     addFanScore(
       5,
@@ -252,6 +328,7 @@ export const SquadsAndSocialView: React.FC = () => {
     if (presetType === 'xg-chart') {
       widget = {
         type: 'xg-chart',
+        widgetType: 'xg-chart',
         title: isFr
           ? `Poussée xG en direct · ${activeMatch.minute}'`
           : `Live xG Surge · ${activeMatch.minute}'`,
@@ -265,10 +342,16 @@ export const SquadsAndSocialView: React.FC = () => {
           ? `+${(activeMatch.homeXG - activeMatch.awayXG).toFixed(2)} écart xG`
           : `+${(activeMatch.homeXG - activeMatch.awayXG).toFixed(2)} xG edge`,
         accentColor: '#B8FF01',
+        pointer: {
+          widgetType: 'xg-chart',
+          matchId: activeMatch.id,
+          sharedAtMinute: activeMatch.minute,
+        },
       };
     } else if (presetType === 'player-rating') {
       widget = {
         type: 'player-rating',
+        widgetType: 'player-rating',
         title: isFr
           ? `${topPlayer.name} · Note du match`
           : `${topPlayer.name} · Live Player Rating`,
@@ -278,10 +361,16 @@ export const SquadsAndSocialView: React.FC = () => {
           ? `▲ +${Math.abs(topPlayer.ratingDelta).toFixed(1)} sur 15 min`
           : `▲ +${Math.abs(topPlayer.ratingDelta).toFixed(1)} last 15m`,
         accentColor: '#B8FF01',
+        pointer: {
+          widgetType: 'player-rating',
+          matchId: activeMatch.id,
+          sharedAtMinute: activeMatch.minute,
+        },
       };
     } else {
       widget = {
         type: 'ai-highlight',
+        widgetType: 'ai-highlight',
         title: isFr
           ? "67' Extrait But Havertz (0.64 xG)"
           : "67' Havertz Goal Clip (0.64 xG)",
@@ -291,6 +380,11 @@ export const SquadsAndSocialView: React.FC = () => {
         metricPrimary: "67' · 0.64 xG",
         metricSecondary: isFr ? 'Vidéo 0:24' : '0:24 Clip',
         accentColor: '#B8FF01',
+        pointer: {
+          widgetType: 'ai-highlight',
+          matchId: activeMatch.id,
+          sharedAtMinute: activeMatch.minute,
+        },
       };
     }
     shareWidgetToSquad(widget);
@@ -309,6 +403,24 @@ export const SquadsAndSocialView: React.FC = () => {
 
   return (
     <div className="bg-[#050D08] text-slate-100">
+      {/* Step 1: Pure Tactical Mode Collapse Notice */}
+      {pureTacticalMode && (
+        <div className="bg-[#00F59B]/10 border-b border-[#00F59B]/30 px-6 py-3">
+          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-[#00F59B]">
+            <span className="flex items-center gap-2">
+              <Crosshair className="w-4 h-4 shrink-0" />
+              <strong>PURE TACTICAL MODE ACTIVE</strong> — Gamification (FanScore Pick&apos;Em) and social chat drawers are collapsed so purist supporters experience distraction-free match analytics.
+            </span>
+            <button
+              onClick={() => togglePureTacticalMode(false)}
+              className="px-3 py-1 rounded bg-[#00F59B] text-[#050D08] font-bold text-xs cursor-pointer hover:bg-[#00d685]"
+            >
+              Disable Pure Tactical
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* =====================================================================
           HERO HEADER — Backed by /images/squads-pub.jpg
       ===================================================================== */}
@@ -447,7 +559,33 @@ export const SquadsAndSocialView: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {pureTacticalMode ? (
+            <div className="rounded-2xl bg-[#08140C] border border-[#00F59B]/30 p-8 text-center space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#00F59B]/15 border border-[#00F59B]/40 text-[#00F59B] mx-auto flex items-center justify-center">
+                <Crosshair className="w-6 h-6" />
+              </div>
+              <h3 className="font-display font-bold text-xl text-white">
+                {isFr
+                  ? 'Salons Squads & Audio LiveKit Masqués en Mode Pur Tactique'
+                  : 'Squad Chat Drawers & LiveKit Audio Collapsed in Pure Tactical Mode'}
+              </h3>
+              <p className="text-sm text-slate-400 max-w-lg mx-auto leading-relaxed">
+                {isFr
+                  ? 'Les salons de discussion de groupe et le salon vocal LiveKit sont masqués pour offrir une vue 100% dédiée à l’analyse statistique du match.'
+                  : 'Private Squad group threads, voice rooms, and banter drawers are collapsed so purist supporters experience a distraction-free statistical Match Center.'}
+              </p>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => togglePureTacticalMode(false)}
+                  className="px-4 py-2 rounded-xl bg-[#00F59B] text-[#050D08] font-bold text-xs cursor-pointer hover:bg-[#00d685]"
+                >
+                  {isFr ? 'Désactiver le Mode Pur Tactique' : 'Disable Pure Tactical Mode'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Left Column (4 cols): 3 Squad Switcher Cards + Voice Room Control + Highlight Preview */}
             <div className="lg:col-span-4 space-y-5">
               <div className="space-y-2.5">
@@ -500,19 +638,27 @@ export const SquadsAndSocialView: React.FC = () => {
                 })}
               </div>
 
-              {/* Live Voice Room Card */}
+              {/* LiveKit Cloud WebRTC SFU Watch Party Bar */}
               <div className="rounded-xl bg-[#08140C] border border-[#162B1E] p-5 space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Radio className="w-4 h-4 text-[#B8FF01] animate-pulse" />
                     <span className="font-mono text-xs uppercase tracking-wider text-[#B8FF01] font-semibold">
-                      {isFr ? 'SALON VOCAL LIVE' : 'LIVE VOICE ROOM'}
+                      {isFr
+                        ? 'SALON VOCAL LIVEKIT SFU'
+                        : 'LIVEKIT CLOUD WEBRTC SFU'}
                     </span>
                   </div>
-                  <span className="font-mono text-[11px] text-slate-400">
-                    {isFr ? 'Sync 12ms' : '12ms sync'}
+                  <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#050D08] border border-[#1F3B2A] text-cyan-400">
+                    $0.00025–$0.0004/min vs Agora
                   </span>
                 </div>
+
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  {isFr
+                    ? 'Routage audio WebRTC SFU ultra-basse latence (12ms) avec synchronisation d’horloge de match.'
+                    : 'Ultra-low-latency WebRTC SFU audio routing (12ms sync) with optional Scorecer AI Voice Agent co-host.'}
+                </p>
 
                 <div className="flex flex-wrap gap-2">
                   {currentSquad.activeVoiceMembers.map((vm, idx) => (
@@ -544,7 +690,42 @@ export const SquadsAndSocialView: React.FC = () => {
                       </span>
                     </div>
                   )}
+
+                  {aiCoHostActive && (
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-cyan-950/60 border border-cyan-500/50">
+                      <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                      <Bot className="w-3.5 h-3.5 text-cyan-400" />
+                      <span className="text-xs font-semibold text-cyan-300">
+                        Scorecer AI Co-Host (Sonic-3.6)
+                      </span>
+                    </div>
+                  )}
                 </div>
+
+                {/* Invite Scorecer AI Voice Co-Host Button */}
+                <button
+                  type="button"
+                  onClick={handleInviteAiCoHost}
+                  className={`w-full py-2.5 px-3.5 rounded-lg font-mono text-xs transition-all cursor-pointer flex items-center justify-between border ${
+                    aiCoHostActive
+                      ? 'bg-cyan-500/15 border-cyan-400/60 text-cyan-200'
+                      : 'bg-[#050D08] hover:bg-[#0B1A11] border-[#1F3B2A] hover:border-cyan-400/50 text-slate-200'
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-2 font-semibold">
+                    <Bot className="w-4 h-4 text-cyan-400" />
+                    {aiCoHostActive
+                      ? isFr
+                        ? 'Co-Hôte Vocal IA Actif (Cliquer pour retirer)'
+                        : 'AI Voice Co-Host Active (Click to Dismiss)'
+                      : isFr
+                      ? 'Inviter le Co-Hôte Vocal IA Scorecer'
+                      : 'Invite Scorecer AI Voice Co-Host'}
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                    $0.01/min • PRO
+                  </span>
+                </button>
 
                 <div className="flex items-center gap-2.5 pt-1">
                   <button
@@ -555,8 +736,8 @@ export const SquadsAndSocialView: React.FC = () => {
                       triggerToast(
                         next
                           ? isFr
-                            ? 'Connecté au salon vocal du Squad !'
-                            : 'Joined Squad live voice room!'
+                            ? 'Connecté au salon vocal LiveKit du Squad !'
+                            : 'Joined Squad LiveKit SFU voice room!'
                           : isFr
                           ? 'Vous avez quitté le salon vocal.'
                           : 'Left Squad voice room.'
@@ -639,29 +820,70 @@ export const SquadsAndSocialView: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Column (8 cols): Squad Chat Thread + 1-Tap Live Widget Dropper */}
+            {/* Right Column (8 cols): 3-Channel Squad Chat Thread + 1-Tap Live Widget Dropper */}
             <div className="lg:col-span-8 rounded-xl bg-[#08140C] border border-[#162B1E] overflow-hidden flex flex-col">
-              {/* Chat Header */}
-              <div className="px-6 py-4 bg-[#0B1A11] border-b border-[#162B1E] flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-[#B8FF01]" />
-                    <h3 className="font-display font-bold text-base text-white">
-                      {isFr && SQUAD_TRANSLATIONS[currentSquad.id]
-                        ? SQUAD_TRANSLATIONS[currentSquad.id].nameFr
-                        : currentSquad.name}
-                    </h3>
+              {/* Chat Header + 3-Channel Squads Architecture Tabs */}
+              <div className="px-6 py-4 bg-[#0B1A11] border-b border-[#162B1E] space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-[#B8FF01]" />
+                      <h3 className="font-display font-bold text-base text-white">
+                        {isFr && SQUAD_TRANSLATIONS[currentSquad.id]
+                          ? SQUAD_TRANSLATIONS[currentSquad.id].nameFr
+                          : currentSquad.name}
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {isFr
+                        ? 'Architecture Squads 3-Canaux · Les widgets JSON se synchronisent à 60fps avec le match.'
+                        : '3-Channel Squads Architecture · Shared JSON pointer widgets render at 60fps synced to match clock.'}
+                    </p>
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {isFr
-                      ? 'Les widgets partagés se mettent à jour automatiquement avec le match en direct.'
-                      : 'Shared widgets stay live-synced as the match clock ticks.'}
-                  </p>
+
+                  <span className="font-mono text-xs px-3 py-1 rounded-md bg-[#050D08] border border-[#162B1E] text-[#B8FF01]">
+                    {currentSquad.onlineCount} {isFr ? 'connectés' : 'in chat'}
+                  </span>
                 </div>
 
-                <span className="font-mono text-xs px-3 py-1 rounded-md bg-[#050D08] border border-[#162B1E] text-[#B8FF01]">
-                  {currentSquad.onlineCount} {isFr ? 'connectés' : 'in chat'}
-                </span>
+                {/* 3-Channel Sub-Navigation */}
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  {(
+                    [
+                      {
+                        id: 'match-day-thread',
+                        labelEn: '# Match Day Thread',
+                        labelFr: '# Fil Jour de Match',
+                      },
+                      {
+                        id: 'general-banter',
+                        labelEn: '# General Banter',
+                        labelFr: '# Chambrage Général',
+                      },
+                      {
+                        id: 'pinned-widgets',
+                        labelEn: '📌 Pinned Widgets & Highlights',
+                        labelFr: '📌 Widgets & Extraits Épinglés',
+                      },
+                    ] as const
+                  ).map((ch) => {
+                    const active = activeSubChannel === ch.id;
+                    return (
+                      <button
+                        key={ch.id}
+                        type="button"
+                        onClick={() => setActiveSubChannel(ch.id)}
+                        className={`px-3.5 py-1.5 rounded-lg font-mono text-xs transition-all cursor-pointer border ${
+                          active
+                            ? 'bg-[#B8FF01] text-[#050D08] border-[#B8FF01] font-bold'
+                            : 'bg-[#050D08] text-slate-300 border-[#162B1E] hover:border-[#B8FF01]/40'
+                        }`}
+                      >
+                        {isFr ? ch.labelFr : ch.labelEn}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Messages Stream */}
@@ -671,17 +893,30 @@ export const SquadsAndSocialView: React.FC = () => {
                     isFr && MESSAGE_TEXT_FR[msg.id]
                       ? MESSAGE_TEXT_FR[msg.id]
                       : msg.text;
+                  const widgetPointer = msg.widget?.pointer || {
+                    widgetType: msg.widget?.widgetType || msg.widget?.type || 'xg-chart',
+                    matchId: activeMatch.id,
+                    sharedAtMinute: activeMatch.minute,
+                  };
 
                   return (
                     <div
                       key={msg.id}
-                      className="rounded-xl bg-[#050D08] border border-[#162B1E] p-4 space-y-3"
+                      className={`rounded-xl border p-4 space-y-3 ${
+                        msg.isAiCoHost
+                          ? 'bg-cyan-950/20 border-cyan-500/40'
+                          : 'bg-[#050D08] border-[#162B1E]'
+                      }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
                           <div
                             className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-[#050D08]"
-                            style={{ backgroundColor: '#B8FF01' }}
+                            style={{
+                              backgroundColor: msg.isAiCoHost
+                                ? '#00D4FF'
+                                : '#B8FF01',
+                            }}
                           >
                             {msg.author.charAt(0)}
                           </div>
@@ -697,9 +932,14 @@ export const SquadsAndSocialView: React.FC = () => {
                                 PRO
                               </span>
                             )}
+                            {msg.isAiCoHost && (
+                              <span className="font-mono text-[10px] uppercase px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                                LIVEKIT AI CO-HOST
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <span className="font-mono text-xs text-slate-400">
+                        <span className="font-mono text-xs text-slate-400 tabular-nums">
                           {msg.timestamp}
                         </span>
                       </div>
@@ -708,29 +948,54 @@ export const SquadsAndSocialView: React.FC = () => {
                         {localizedText}
                       </p>
 
-                      {/* Embedded Live Widget inside Message */}
+                      {/* Embedded Live 60fps JSON Pointer Widget inside Message */}
                       {msg.widget && (
-                        <div className="rounded-lg bg-[#0B1A11] border border-[#1F3B2A] p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div className="space-y-1">
-                            <span className="font-mono text-[10px] uppercase tracking-wider text-[#B8FF01]">
-                              {isFr ? 'WIDGET EN DIRECT' : 'LIVE MATCH WIDGET'} ·{' '}
-                              {msg.widget.type.toUpperCase()}
-                            </span>
-                            <div className="font-display font-bold text-sm text-white">
-                              {msg.widget.title}
+                        <div className="rounded-lg bg-[#0B1A11] border border-[#1F3B2A] p-3.5 space-y-2.5">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-mono text-[10px] uppercase tracking-wider text-[#B8FF01] flex items-center gap-1">
+                                  <Pin className="w-3 h-3" />
+                                  {isFr
+                                    ? 'WIDGET 60FPS EN DIRECT'
+                                    : '60FPS LIVE TELEMETRY WIDGET'}{' '}
+                                  · {msg.widget.type.toUpperCase()}
+                                </span>
+                                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#050D08] text-cyan-300 border border-cyan-500/30">
+                                  SYNCED @ {activeMatch.minute}&apos;
+                                </span>
+                              </div>
+                              <div className="font-display font-bold text-sm text-white">
+                                {msg.widget.title}
+                              </div>
+                              <div className="text-xs text-slate-400">
+                                {msg.widget.subtitle}
+                              </div>
                             </div>
-                            <div className="text-xs text-slate-400">
-                              {msg.widget.subtitle}
+
+                            <div className="sm:text-right bg-[#050D08] px-3.5 py-2 rounded-lg border border-[#162B1E] shrink-0">
+                              <div className="font-wide text-base font-extrabold text-[#B8FF01] tabular-nums">
+                                {msg.widget.type === 'xg-chart'
+                                  ? `${activeMatch.homeXG.toFixed(2)} — ${activeMatch.awayXG.toFixed(2)} xG`
+                                  : msg.widget.type === 'player-rating'
+                                  ? `${topPlayer.rating.toFixed(1)} ★`
+                                  : msg.widget.metricPrimary}
+                              </div>
+                              <div className="font-mono text-[11px] text-slate-300 tabular-nums">
+                                {msg.widget.metricSecondary}
+                              </div>
                             </div>
                           </div>
 
-                          <div className="sm:text-right bg-[#050D08] px-3.5 py-2 rounded-lg border border-[#162B1E] shrink-0">
-                            <div className="font-wide text-base font-extrabold text-[#B8FF01]">
-                              {msg.widget.metricPrimary}
-                            </div>
-                            <div className="font-mono text-[11px] text-slate-300">
-                              {msg.widget.metricSecondary}
-                            </div>
+                          {/* Lightweight JSON Pointer Pill */}
+                          <div className="pt-2 border-t border-[#162B1E] flex items-center justify-between gap-2 text-[10px] font-mono text-slate-400">
+                            <span className="inline-flex items-center gap-1 text-cyan-400">
+                              <Code2 className="w-3 h-3" />
+                              JSON Pointer:
+                            </span>
+                            <code className="text-slate-300 bg-[#050D08] px-2 py-0.5 rounded border border-[#162B1E] truncate">
+                              {`{ "widgetType": "${widgetPointer.widgetType}", "matchId": "${widgetPointer.matchId}", "sharedAtMinute": ${widgetPointer.sharedAtMinute} }`}
+                            </code>
                           </div>
                         </div>
                       )}
@@ -753,7 +1018,7 @@ export const SquadsAndSocialView: React.FC = () => {
                               className="px-2.5 py-1 rounded-md bg-[#08140C] hover:bg-[#0B1A11] border border-[#162B1E] text-xs text-slate-300 flex items-center gap-1.5 transition-colors cursor-pointer"
                             >
                               <span>{r.emoji}</span>
-                              <span className="font-mono text-[11px]">
+                              <span className="font-mono text-[11px] tabular-nums">
                                 {r.count + extra}
                               </span>
                             </button>
@@ -771,8 +1036,8 @@ export const SquadsAndSocialView: React.FC = () => {
                   <span className="font-mono text-[11px] uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-[#B8FF01]" />
                     {isFr
-                      ? 'Partager un widget live dans le chat (+10 FanScore) :'
-                      : '1-Tap Drop Live Match Widget into Chat (+10 FanScore):'}
+                      ? 'Partager un pointeur JSON de widget 60fps dans le chat (+10 FanScore) :'
+                      : '1-Tap Drop 60fps JSON Widget Pointer into Chat (+10 FanScore):'}
                   </span>
                 </div>
 
@@ -787,7 +1052,7 @@ export const SquadsAndSocialView: React.FC = () => {
                       <div className="text-xs font-semibold text-white truncate">
                         {isFr ? 'Poussée xG' : 'xG Surge'}
                       </div>
-                      <div className="font-mono text-[11px] text-[#B8FF01] truncate">
+                      <div className="font-mono text-[11px] text-[#B8FF01] truncate tabular-nums">
                         {activeMatch.homeXG.toFixed(2)} vs{' '}
                         {activeMatch.awayXG.toFixed(2)} xG
                       </div>
@@ -804,8 +1069,8 @@ export const SquadsAndSocialView: React.FC = () => {
                       <div className="text-xs font-semibold text-white truncate">
                         {isFr ? 'Note Joueur' : 'Player Rating'}
                       </div>
-                      <div className="font-mono text-[11px] text-[#B8FF01] truncate">
-                        Saka 9.1 ★
+                      <div className="font-mono text-[11px] text-[#B8FF01] truncate tabular-nums">
+                        {topPlayer.name.split(' ').pop()} {topPlayer.rating.toFixed(1)} ★
                       </div>
                     </div>
                   </button>
@@ -838,7 +1103,7 @@ export const SquadsAndSocialView: React.FC = () => {
                     placeholder={
                       isFr
                         ? 'Écrire un message à votre Squad...'
-                        : `Message ${currentSquad.name}...`
+                        : `Message ${currentSquad.name} (${activeSubChannel})...`
                     }
                     className="flex-1 bg-[#050D08] border border-[#1F3B2A] focus:border-[#B8FF01] rounded-lg px-4 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none"
                   />
@@ -853,48 +1118,92 @@ export const SquadsAndSocialView: React.FC = () => {
               </div>
             </div>
           </div>
+          )}
         </div>
       </section>
 
       {/* =====================================================================
-          02 · STOP-PLAY MICRO-PREDICTIONS & FANSCORE REWARDS
+          02 · LIVE TACTICAL CHALLENGES (FANSCORE PICK'EM) — APPLE 5.3.2 COMPLIANT
       ===================================================================== */}
       <section
         id="section-predictions"
         className="border-b border-[#162B1E] py-16 lg:py-20 px-6"
       >
         <div className="max-w-7xl mx-auto space-y-12">
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-            <div className="space-y-3 max-w-2xl">
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-[#B8FF01]">
+          {pureTacticalMode ? (
+            <div className="rounded-2xl bg-[#08140C] border border-[#162B1E] p-8 text-center space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#00F59B]/15 border border-[#00F59B]/40 text-[#00F59B] mx-auto flex items-center justify-center">
+                <Crosshair className="w-6 h-6" />
+              </div>
+              <h3 className="font-display font-bold text-xl text-white">
+                {isFr ? 'Défis Gamifiés Masqués en Mode Pur Tactique' : 'Gamification Collapsed in Pure Tactical Mode'}
+              </h3>
+              <p className="text-sm text-slate-400 max-w-lg mx-auto leading-relaxed">
                 {isFr
-                  ? '02 · PRONOSTICS D’ARRÊT DE JEU & RÉCOMPENSES FANSCORE'
-                  : '02 · STOP-PLAY MICRO-PREDICTIONS & FANSCORE REWARDS'}
+                  ? 'Les cartes FanScore Pick’Em et la boutique de fidélité sont masquées pour garantir une expérience de match 100% statistique et sans distraction.'
+                  : 'FanScore Pick’Em challenge cards and loyalty redemption are collapsed so purist supporters experience a distraction-free statistical Match Center.'}
               </p>
-              <h2 className="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight">
-                {isFr
-                  ? 'Transformez votre lecture du jeu en FanScore.'
-                  : 'Turn your football IQ into FanScore.'}
-              </h2>
-              <p className="text-base text-slate-400 leading-relaxed">
-                {isFr
-                  ? 'Chaque coup franc, corner ou bascule tactique ouvre un pronostic rapide. Verrouillez OUI ou NON avant le coup de sifflet et échangez vos points contre des streams ou des avantages au pub.'
-                  : 'Every free-kick, VAR check, or tactical shift triggers a live micro-prediction. Lock in YES or NO before the whistle and redeem your FanScore for streams or pub perks.'}
-              </p>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => togglePureTacticalMode(false)}
+                  className="px-4 py-2 rounded-xl bg-[#00F59B] text-[#050D08] font-bold text-xs cursor-pointer hover:bg-[#00d685]"
+                >
+                  {isFr ? 'Désactiver le Mode Pur Tactique' : 'Disable Pure Tactical Mode'}
+                </button>
+              </div>
             </div>
+          ) : (
+            <>
+              <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+                <div className="space-y-3 max-w-2xl">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-mono text-xs uppercase tracking-[0.2em] text-[#B8FF01]">
+                      {isFr
+                        ? '02 · DÉFIS TACTIQUES EN DIRECT (FANSCORE PICK’EM)'
+                        : "02 · LIVE TACTICAL CHALLENGES (FANSCORE PICK'EM)"}
+                    </p>
+                    <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                      APPLE GUIDELINE 5.3.2 COMPLIANT · 100% FREE-TO-PLAY
+                    </span>
+                  </div>
+                  <h2 className="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight">
+                    {isFr
+                      ? 'Défis Tactiques Gratuits & Fidélité Numérique FanScore.'
+                      : "Live Tactical Challenges (FanScore Pick'Em)."}
+                  </h2>
+                  <p className="text-base text-slate-400 leading-relaxed">
+                    {isFr
+                      ? '100% gratuit, sans mise d’argent réel ni valeur monétaire. Testez votre lecture tactique du match pour débloquer des badges de profil, des packs vocaux Sonic-3.6 et des vues caméras tactiques.'
+                      : '100% free-to-play skill challenges with zero real-money wagering or cash value. Test your live tactical IQ to unlock digital profile frames, Cartesia Sonic-3.6 voice packs, and All-22 camera angles.'}
+                  </p>
+                </div>
 
-            <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-[#08140C] border border-[#162B1E] self-start lg:self-end">
-              <Flame className="w-4 h-4 text-[#B8FF01]" />
-              <span className="font-mono text-xs text-slate-300">
-                {isFr ? 'Solde disponible :' : 'Available Balance:'}
-              </span>
-              <span className="font-mono text-sm font-bold text-[#B8FF01]">
-                {user.fanScore.toLocaleString()} PTS
-              </span>
-            </div>
-          </div>
+                <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-[#08140C] border border-[#162B1E] self-start lg:self-end">
+                  <Flame className="w-4 h-4 text-[#B8FF01]" />
+                  <span className="font-mono text-xs text-slate-300">
+                    {isFr ? 'Solde Fidélité :' : 'Loyalty Balance:'}
+                  </span>
+                  <span className="font-mono text-sm font-bold text-[#B8FF01] tabular-nums">
+                    {user.fanScore.toLocaleString()} PTS
+                  </span>
+                </div>
+              </div>
 
-          {/* 3 Stop-Play Micro-Prediction Cards */}
+              {/* Persistent Compliance Badge on Tactical Challenges View */}
+              <div className="rounded-xl bg-[#050D08] border border-[#1F3B2A] p-3.5 flex items-center justify-between gap-3 text-xs font-mono text-slate-300">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-[#00F59B] shrink-0" />
+                  <span>
+                    100% Free-to-Play Skill Challenges (Apple Guideline 5.3.2 Compliant). FanScore points are virtual, have no monetary value, and cannot be purchased, transferred, or cashed out.
+                  </span>
+                </div>
+                <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] shrink-0 font-bold">
+                  GUIDELINE 5.3.2
+                </span>
+              </div>
+
+          {/* 3 Live Tactical Challenge (Pick'Em) Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {microPredictions.map((pred) => {
               const isLocked = Boolean(pred.userChoice);
@@ -943,7 +1252,9 @@ export const SquadsAndSocialView: React.FC = () => {
                           className="py-3 px-4 rounded-lg bg-[#B8FF01] hover:bg-[#c8ff38] text-[#050D08] font-semibold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-between"
                         >
                           <span>{isFr ? 'OUI' : 'YES'}</span>
-                          <span className="font-mono">{pred.yesOddsPct}%</span>
+                          <span className="font-mono tabular-nums">
+                            {pred.yesOddsPct}%
+                          </span>
                         </button>
                         <button
                           type="button"
@@ -951,7 +1262,7 @@ export const SquadsAndSocialView: React.FC = () => {
                           className="py-3 px-4 rounded-lg bg-[#050D08] hover:bg-[#0B1A11] text-white border border-[#244430] font-semibold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-between"
                         >
                           <span>{isFr ? 'NON' : 'NO'}</span>
-                          <span className="font-mono text-slate-400">
+                          <span className="font-mono text-slate-400 tabular-nums">
                             {pred.noOddsPct}%
                           </span>
                         </button>
@@ -961,8 +1272,8 @@ export const SquadsAndSocialView: React.FC = () => {
                         <span className="inline-flex items-center gap-1.5 text-[#B8FF01] font-semibold">
                           <CheckCircle2 className="w-4 h-4" />
                           {isFr
-                            ? `Pronostic validé (${pred.userChoice?.toUpperCase()})`
-                            : `Prediction Locked (${pred.userChoice?.toUpperCase()})`}
+                            ? `Choix tactique verrouillé (${pred.userChoice?.toUpperCase()})`
+                            : `Pick'Em Locked (${pred.userChoice?.toUpperCase()})`}
                         </span>
                         <span className="font-mono text-[#B8FF01] font-bold">
                           +{pred.pointsReward} PTS
@@ -973,7 +1284,9 @@ export const SquadsAndSocialView: React.FC = () => {
                     <div className="flex items-center justify-between text-[11px] font-mono text-slate-500">
                       <span>{pred.sponsorName}</span>
                       <span>
-                        {isFr ? 'Résolution instantanée' : 'Instant settlement'}
+                        {isFr
+                          ? '100% Gratuit · Sans mise'
+                          : 'Free-to-Play · Zero Wager'}
                       </span>
                     </div>
                   </div>
@@ -982,23 +1295,25 @@ export const SquadsAndSocialView: React.FC = () => {
             })}
           </div>
 
-          {/* FanScore Rewards Store */}
+          {/* Non-Monetary Digital Loyalty Rewards Store */}
           <div className="pt-4 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.2em] text-[#B8FF01]">
-                  {isFr ? 'BOUTIQUE FANSCORE' : 'FANSCORE REWARDS'}
+                  {isFr
+                    ? 'RÉCOMPENSES NUMÉRIQUES DE FIDÉLITÉ (SANS VALEUR MONÉTAIRE)'
+                    : 'DIGITAL LOYALTY REWARDS (100% NON-MONETARY)'}
                 </p>
                 <h3 className="font-display text-2xl font-bold text-white mt-1">
                   {isFr
-                    ? 'Échangez vos points contre des avantages réels'
-                    : 'Redeem your points for match passes & pub perks'}
+                    ? 'Débloquez des badges, voix IA et angles tactiques'
+                    : 'Unlock digital profile badges, AI voices & tactical angles'}
                 </h3>
               </div>
               <span className="font-mono text-xs text-slate-400">
                 {isFr
-                  ? 'Déblocage en 1 clic · Sans carte bancaire'
-                  : '1-click instant unlock · Zero checkout friction'}
+                  ? 'Conforme Apple 5.3.2 · Aucune valeur monétaire'
+                  : 'Apple 5.3.2 Compliant · Zero cash value'}
               </span>
             </div>
 
@@ -1031,7 +1346,7 @@ export const SquadsAndSocialView: React.FC = () => {
                     </div>
 
                     <div className="pt-3 border-t border-[#162B1E] flex items-center justify-between gap-2">
-                      <span className="font-mono text-sm font-bold text-[#B8FF01]">
+                      <span className="font-mono text-sm font-bold text-[#B8FF01] tabular-nums">
                         {reward.costPoints} PTS
                       </span>
 
@@ -1063,21 +1378,63 @@ export const SquadsAndSocialView: React.FC = () => {
                 );
               })}
             </div>
+
+            {/* Mandatory Store Compliance Footer (Apple Guideline 5.3.2) */}
+            <div className="rounded-xl bg-[#050D08] border border-[#1F3B2A] p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <ShieldCheck className="w-4 h-4 text-[#B8FF01] shrink-0 mt-0.5" />
+                <p className="font-mono text-xs text-slate-300 leading-relaxed">
+                  100% Free-to-Play Skill Challenges (Apple Guideline 5.3.2 Compliant). FanScore points are virtual, have no monetary value, and cannot be purchased, transferred, or cashed out. Apple Inc. and Google LLC are not sponsors of, nor affiliated with, Scorecer rewards.
+                </p>
+              </div>
+              <span className="font-mono text-[10px] uppercase px-2.5 py-1 rounded bg-[#0B1A11] text-[#B8FF01] border border-[#1F3B2A] shrink-0">
+                GUIDELINE 5.3.2 COMPLIANT
+              </span>
+            </div>
           </div>
-        </div>
-      </section>
+        </>
+      )}
+    </div>
+  </section>
 
       {/* =====================================================================
-          03 · PUBLIC MATCH MEGATHREAD (BANTER VS ABUSE AI GUARD)
+          03 · PUBLIC MATCH MEGATHREAD (SCORELINE-ADAPTIVE TWO-STAGE NLP SHIELD)
       ===================================================================== */}
       <section className="py-16 lg:py-20 px-6">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+        <div className="max-w-7xl mx-auto space-y-8">
+          {pureTacticalMode ? (
+            <div className="rounded-2xl bg-[#08140C] border border-[#00F59B]/30 p-8 text-center space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#00F59B]/15 border border-[#00F59B]/40 text-[#00F59B] mx-auto flex items-center justify-center">
+                <Crosshair className="w-6 h-6" />
+              </div>
+              <h3 className="font-display font-bold text-xl text-white">
+                {isFr
+                  ? 'Fil Public Megathread Masqué en Mode Pur Tactique'
+                  : 'Public Megathread Collapsed in Pure Tactical Mode'}
+              </h3>
+              <p className="text-sm text-slate-400 max-w-lg mx-auto leading-relaxed">
+                {isFr
+                  ? 'Les réactions de supporters et les débats publics sont masqués pour concentrer toute la bande passante visuelle sur la télémétrie du match en direct.'
+                  : 'Public social comment streams and reaction threads are collapsed for distraction-free tactical analysis.'}
+              </p>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => togglePureTacticalMode(false)}
+                  className="px-4 py-2 rounded-xl bg-[#00F59B] text-[#050D08] font-bold text-xs cursor-pointer hover:bg-[#00d685]"
+                >
+                  {isFr ? 'Désactiver le Mode Pur Tactique' : 'Disable Pure Tactical Mode'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           {/* Left Editorial Column (5 cols) */}
           <div className="lg:col-span-5 space-y-6">
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-[#B8FF01]">
               {isFr
-                ? '03 · SALON PUBLIC DU MATCH (IA CHAMBRAGE VS ABUS)'
-                : '03 · PUBLIC MATCH MEGATHREAD (BANTER VS ABUSE AI GUARD)'}
+                ? '03 · BOUCLIER NLP À DEUX ÉTAPES ADAPTATIF AU SCORE'
+                : '03 · SCORELINE-ADAPTIVE TWO-STAGE NLP MODERATION SHIELD'}
             </p>
 
             <h2 className="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight leading-tight">
@@ -1088,16 +1445,16 @@ export const SquadsAndSocialView: React.FC = () => {
 
             <p className="text-base text-slate-400 leading-relaxed">
               {isFr
-                ? 'Le football vit de chambrage et de débats tactiques. Notre modération IA distingue la vraie passion des supporters (+10 FanScore) et l’analyse tactique (+15 FanScore) des insultes ou arnaques crypto.'
-                : 'Football thrives on rivalry banter and tactical debate. Scorecer’s NLP Guard welcomes passionate supporter banter (+10 FanScore) and tactical insight (+15 FanScore) while filtering out personal abuse and spam.'}
+                ? 'L’Étape 1 autorise les expressions culturelles de football (« parked the bus », « bottled it ») avec un badge VALID BANTER. L’Étape 2 bloque les insultes, dog-whistles extrémistes (88/18) et spams crypto avec une courbe de sensibilité -0.352 quand une équipe est menée.'
+                : 'Stage 1 whitelists cultural football idioms ("parked the bus", "bottled it", "cooked") with a green VALID BANTER badge. Stage 2 quarantines personal abuse, extremist dog-whistle numerology (88/18), and crypto spam along a -0.352 deficit decay curve.'}
             </p>
 
             {/* 1-Click Test Buttons in EN/FR */}
             <div className="space-y-2.5 pt-2">
               <div className="font-mono text-xs uppercase tracking-wider text-slate-300">
                 {isFr
-                  ? 'Tester le filtre IA en 1 clic :'
-                  : '1-Click Interactive AI Guard Tests:'}
+                  ? 'Tester le Bouclier NLP à 2 étapes en 1 clic :'
+                  : '1-Click Two-Stage NLP Shield Tests:'}
               </div>
 
               <button
@@ -1113,11 +1470,11 @@ export const SquadsAndSocialView: React.FC = () => {
               >
                 <span className="text-xs sm:text-sm text-slate-200 truncate">
                   {isFr
-                    ? '🔥 Tester un chambrage de supporter (« Arsenal qui gare le bus... »)'
-                    : '🔥 Test Rivalry Banter ("Arsenal parking the bus...")'}
+                    ? '🔥 Étape 1 : Chambrage (« parking the bus... »)'
+                    : '🔥 Stage 1 Whitelist ("Arsenal parking the bus...")'}
                 </span>
                 <span className="font-mono text-xs text-[#B8FF01] shrink-0">
-                  +10 PTS
+                  VALID BANTER (+10)
                 </span>
               </button>
 
@@ -1134,8 +1491,8 @@ export const SquadsAndSocialView: React.FC = () => {
               >
                 <span className="text-xs sm:text-sm text-slate-200 truncate">
                   {isFr
-                    ? '🧠 Tester une analyse tactique (« Rice en Zone 14... »)'
-                    : '🧠 Test Tactical Insight ("Rice dropping into Zone 14...")'}
+                    ? '🧠 Analyse Tactique (« Rice en Zone 14... »)'
+                    : '🧠 Tactical Insight ("Rice dropping into Zone 14...")'}
                 </span>
                 <span className="font-mono text-xs text-[#B8FF01] shrink-0">
                   +15 PTS
@@ -1146,18 +1503,18 @@ export const SquadsAndSocialView: React.FC = () => {
                 type="button"
                 onClick={() =>
                   handleSubmitMegathread(
-                    'You are an idiot buy my crypto pump token scam'
+                    'You are an idiot 88 buy my crypto pump token scam'
                   )
                 }
                 className="w-full text-left p-3.5 rounded-lg bg-[#08140C] hover:bg-[#0B1A11] border border-[#162B1E] hover:border-rose-500/40 transition-all cursor-pointer flex items-center justify-between gap-3"
               >
                 <span className="text-xs sm:text-sm text-slate-300 truncate">
                   {isFr
-                    ? '🛡️ Tester le blocage d’insulte / spam crypto'
-                    : '🛡️ Test Toxic Abuse / Crypto Spam Filter'}
+                    ? '🛡️ Étape 2 : Insulte / Dog-Whistle 88 / Spam Crypto'
+                    : '🛡️ Stage 2 Shield: Abuse / 88 Dog-Whistle / Crypto Spam'}
                 </span>
                 <span className="font-mono text-xs text-rose-400 shrink-0">
-                  {isFr ? 'Bloqué' : 'Filtered'}
+                  {isFr ? 'Quarantaine' : 'Quarantined'}
                 </span>
               </button>
             </div>
@@ -1179,15 +1536,15 @@ export const SquadsAndSocialView: React.FC = () => {
                   <div className="font-mono uppercase font-semibold text-[#B8FF01]">
                     {lastModerationResult.status === 'filtered-toxic'
                       ? isFr
-                        ? 'Message intercepté par l’IA'
-                        : 'Intercepted by AI Guard'
+                        ? 'STAGE_2_TOXICITY_SHIELD · Quarantaine'
+                        : 'STAGE_2_TOXICITY_SHIELD · Quarantined'
                       : lastModerationResult.status === 'verified-analysis'
                       ? isFr
                         ? 'Analyse Tactique Vérifiée (+15 PTS)'
                         : 'Verified Tactical Insight (+15 PTS)'
                       : isFr
-                      ? 'Chambrage Football Approuvé (+10 PTS)'
-                      : 'Approved Football Banter (+10 PTS)'}
+                      ? 'STAGE_1_BANTER_WHITELIST · VALID BANTER (+10 PTS)'
+                      : 'STAGE_1_BANTER_WHITELIST · VALID BANTER (+10 PTS)'}
                   </div>
                   <p className="text-slate-300 leading-relaxed">
                     {lastModerationResult.reason}
@@ -1214,20 +1571,73 @@ export const SquadsAndSocialView: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Column (7 cols): Live Public Megathread Feed */}
+          {/* Right Column (7 cols): Live Public Megathread Feed with Moderation Shield Monitor */}
           <div className="lg:col-span-7 rounded-xl bg-[#08140C] border border-[#162B1E] overflow-hidden flex flex-col">
-            <div className="px-6 py-4 bg-[#0B1A11] border-b border-[#162B1E] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-[#B8FF01]" />
-                <h3 className="font-display font-bold text-base text-white">
-                  {isFr
-                    ? 'Fil Public du Match en Direct'
-                    : 'Live Public Match Megathread'}
-                </h3>
+            {/* Moderation Shield Monitor Header */}
+            <div className="px-6 py-4 bg-[#0B1A11] border-b border-[#162B1E] space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-[#B8FF01]" />
+                  <h3 className="font-display font-bold text-base text-white">
+                    {isFr
+                      ? 'Moniteur du Bouclier de Modération NLP'
+                      : 'Moderation Shield Monitor · Public Megathread'}
+                  </h3>
+                </div>
+                <span className="font-mono text-xs text-[#B8FF01] tabular-nums">
+                  {megathreadPosts.length} {isFr ? 'messages' : 'posts'}
+                </span>
               </div>
-              <span className="font-mono text-xs text-[#B8FF01]">
-                {megathreadPosts.length} {isFr ? 'messages' : 'posts'}
-              </span>
+
+              {/* Scoreline-Adaptive Sensitivity State Bar */}
+              <div className="p-3 rounded-lg bg-[#050D08] border border-[#1F3B2A] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="space-y-0.5">
+                  <div className="font-mono text-[10px] uppercase tracking-wider text-slate-400">
+                    {isFr
+                      ? 'ÉTAT DE SENSIBILITÉ ADAPTATIF AU SCORE'
+                      : 'SCORELINE-ADAPTIVE NLP SENSITIVITY STATE'}
+                  </div>
+                  {isDeficitShieldMode ? (
+                    <div className="font-mono text-xs font-semibold text-amber-300 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                      <span>
+                        High-Alert Deficit Mode (-0.352 Decay Curve Active —
+                        Away Team Trailing)
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="font-mono text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                      <span>Standard Mode (Scoreline Tied)</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setOverrideShieldMode('standard')}
+                    className={`px-2.5 py-1 rounded font-mono text-[10px] cursor-pointer border ${
+                      !isDeficitShieldMode
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold'
+                        : 'bg-[#08140C] text-slate-400 border-[#162B1E]'
+                    }`}
+                  >
+                    Standard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOverrideShieldMode('deficit')}
+                    className={`px-2.5 py-1 rounded font-mono text-[10px] cursor-pointer border ${
+                      isDeficitShieldMode
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold'
+                        : 'bg-[#08140C] text-slate-400 border-[#162B1E]'
+                    }`}
+                  >
+                    -0.352 Deficit Mode
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Post Input Form */}
@@ -1289,7 +1699,7 @@ export const SquadsAndSocialView: React.FC = () => {
                           {post.clubBadge}
                         </span>
                       </div>
-                      <span className="font-mono text-xs text-slate-400">
+                      <span className="font-mono text-xs text-slate-400 tabular-nums">
                         {post.timestamp}
                       </span>
                     </div>
@@ -1300,8 +1710,8 @@ export const SquadsAndSocialView: React.FC = () => {
                           <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
                           <span>
                             {isFr
-                              ? `Filtré par l’IA (${post.nlpConfidence}%) : Insulte ou spam détecté.`
-                              : `Filtered by AI Guard (${post.nlpConfidence}%): Abusive or spam content quarantined.`}
+                              ? `STAGE_2_TOXICITY_SHIELD (${post.nlpConfidence}%) : Insulte, dog-whistle ou spam mis en quarantaine.`
+                              : `STAGE_2_TOXICITY_SHIELD (${post.nlpConfidence}%): Abusive, dog-whistle, or spam content quarantined.`}
                           </span>
                         </div>
                         <button
@@ -1326,27 +1736,28 @@ export const SquadsAndSocialView: React.FC = () => {
                       </p>
                     )}
 
-                    <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-[#162B1E]">
-                      <div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-2.5 border-t border-[#162B1E]">
+                      <div className="flex flex-wrap items-center gap-2">
                         {post.moderationStatus === 'verified-analysis' && (
-                          <span className="font-mono text-[11px] text-[#B8FF01]">
+                          <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#B8FF01]/15 text-[#B8FF01] border border-[#B8FF01]/30">
                             ✓{' '}
                             {isFr
-                              ? `Analyse Tactique (${post.nlpConfidence}%)`
-                              : `Verified Tactical Insight (${post.nlpConfidence}%)`}
+                              ? `ANALYSE TACTIQUE (${post.nlpConfidence}%)`
+                              : `VERIFIED TACTICAL INSIGHT (${post.nlpConfidence}%)`}
                           </span>
                         )}
                         {post.moderationStatus === 'approved-banter' && (
-                          <span className="font-mono text-[11px] text-slate-300">
-                            ✓{' '}
-                            {isFr
-                              ? `Chambrage Approuvé (${post.nlpConfidence}%)`
-                              : `Approved Football Banter (${post.nlpConfidence}%)`}
+                          <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold">
+                            ✓ VALID BANTER · STAGE 1 WHITELIST (
+                            {post.nlpConfidence}%)
+                            {post.banterIdiomMatched
+                              ? ` · "${post.banterIdiomMatched}"`
+                              : ''}
                           </span>
                         )}
                         {isToxic && (
-                          <span className="font-mono text-[11px] text-rose-400">
-                            ✕ {isFr ? 'Spam / Abus bloqué' : 'Quarantined'}
+                          <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                            ✕ STAGE 2 QUARANTINE (-0.352 DECAY)
                           </span>
                         )}
                       </div>
@@ -1364,7 +1775,7 @@ export const SquadsAndSocialView: React.FC = () => {
                                 : 'Upvoted community post'
                             );
                           }}
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono transition-colors cursor-pointer ${
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono transition-colors cursor-pointer tabular-nums ${
                             isUpvoted
                               ? 'bg-[#B8FF01] text-[#050D08] font-semibold'
                               : 'bg-[#08140C] hover:bg-[#0B1A11] text-slate-300 border border-[#162B1E]'
@@ -1380,6 +1791,8 @@ export const SquadsAndSocialView: React.FC = () => {
               })}
             </div>
           </div>
+        </div>
+          )}
         </div>
       </section>
     </div>

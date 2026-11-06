@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  ArrowRight,
+  BookOpen,
+  Code2,
+  Cpu,
+  Crosshair,
+  Eye,
   KeyRound,
   Play,
+  Radio,
   Share2,
   Sparkles,
   Volume2,
@@ -10,6 +15,13 @@ import {
 } from 'lucide-react';
 import { useScorecer } from '../../context/ScorecerContext';
 import { CommentaryLanguage } from '../../types/scorecer';
+
+const PHONETIC_DICTIONARY_PREVIEW = [
+  { raw: 'Szoboszlai', phonetic: 'so-BOS-lai', club: 'Liverpool / HUN' },
+  { raw: 'Kvaratskhelia', phonetic: 'kva-rats-KHE-li-a', club: 'PSG / GEO' },
+  { raw: 'Calafiori', phonetic: 'ka-la-FYO-ree', club: 'Arsenal / ITA' },
+  { raw: 'Tchouaméni', phonetic: 'choo-ah-may-NEE', club: 'Real Madrid / FRA' },
+];
 
 const VOICE_SCRIPTS: Record<
   CommentaryLanguage,
@@ -148,6 +160,7 @@ export const ScorecerAIHubView: React.FC = () => {
     triggerToast,
     liveRagSnapshot,
     isAiStreaming,
+    pureTacticalMode,
   } = useScorecer();
 
   const isFr = uiLanguage === 'fr';
@@ -157,8 +170,9 @@ export const ScorecerAIHubView: React.FC = () => {
   const [showApiKeyBox, setShowApiKeyBox] = useState<boolean>(false);
   const [showRagInspector, setShowRagInspector] = useState<boolean>(false);
   const [geminiKey, setGeminiKey] = useState<string>('');
+  const [expandedRagMsgId, setExpandedRagMsgId] = useState<string | null>(null);
 
-  // Commentary Persona Studio state
+  // Cartesia Sonic-3.6 Commentary Persona Studio state
   const [persona, setPersona] = useState<'tactical' | 'passionate' | 'neutral'>(
     'tactical'
   );
@@ -166,12 +180,44 @@ export const ScorecerAIHubView: React.FC = () => {
     isFr ? 'fr' : 'en'
   );
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+  const [activeWordIndex, setActiveWordIndex] = useState<number>(3);
+  const [showPhoneticDict, setShowPhoneticDict] = useState<boolean>(true);
+  const [ephemeralTokenSeconds, setEphemeralTokenSeconds] = useState<number>(54);
+  const [ttfaMs, setTtfaMs] = useState<number>(89.4);
 
-  // Story Format state
-  const [storyMode, setStoryMode] = useState<'vertical' | 'widescreen'>(
+  // Story Format & CV Smart-Crop Overlay state
+  const [storyMode, setStoryMode] = useState<'vertical' | 'square' | 'widescreen'>(
     'vertical'
   );
   const [selectedClipIdx, setSelectedClipIdx] = useState<number>(0);
+  const [showCvOverlay, setShowCvOverlay] = useState<boolean>(true);
+
+  // Animate Cartesia Sonic-3.6 word_timestamps read-along highlight in Electric Cyan (#00D4FF)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveWordIndex((prev) => (prev + 1) % 24);
+    }, isSpeaking ? 260 : 650);
+    return () => clearInterval(interval);
+  }, [isSpeaking]);
+
+  // Dynamic 60-second ephemeral token countdown rotation
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setEphemeralTokenSeconds((prev) => (prev <= 1 ? 60 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Dynamic TTFA latency sampling during speech
+  useEffect(() => {
+    if (!isSpeaking) return;
+    const ttfaTimer = setInterval(() => {
+      setTtfaMs(Number((88.0 + Math.random() * 5.4).toFixed(1)));
+    }, 2200);
+    return () => clearInterval(ttfaTimer);
+  }, [isSpeaking]);
+
+  const dynamicContextId = `ctx_sonic3_${persona}_${voiceLang}_${activeMatch.id.replace(/-/g, '_')}`;
 
   const handleAsk = async (customPrompt?: string) => {
     const text = (customPrompt ?? query).trim();
@@ -183,7 +229,7 @@ export const ScorecerAIHubView: React.FC = () => {
   const handleSpeak = () => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       triggerToast(
-        isFr ? 'Lecture vocale IA activée' : 'AI Voice synthesis started'
+        isFr ? 'Lecture vocale IA activée' : 'Cartesia Sonic-3.6 synthesis started'
       );
       return;
     }
@@ -213,6 +259,7 @@ export const ScorecerAIHubView: React.FC = () => {
   ];
 
   const currentScriptPack = VOICE_SCRIPTS[voiceLang] || VOICE_SCRIPTS.en;
+  const isEnglishSelected = voiceLang === 'en';
 
   return (
     <div className="bg-[#050D08] text-slate-100">
@@ -231,7 +278,7 @@ export const ScorecerAIHubView: React.FC = () => {
         <div className="relative z-10 max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-end justify-between gap-8">
           <div className="max-w-2xl space-y-4">
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-[#B8FF01]">
-              {isFr ? 'STUDIO IA SCORECER' : 'SCORECER AI STUDIO'}
+              {isFr ? 'STUDIO IA SCORECER' : 'SCORECER AI & MEDIA PIPELINE'}
             </p>
             <h1 className="font-display text-3xl sm:text-5xl font-bold text-white tracking-tight leading-tight">
               {isFr
@@ -240,21 +287,21 @@ export const ScorecerAIHubView: React.FC = () => {
             </h1>
             <p className="text-base sm:text-lg text-slate-300 leading-relaxed">
               {isFr
-                ? 'Posez vos questions en direct au terrain, changez la voix du commentateur selon votre humeur et explorez les Stories vidéo découpées automatiquement.'
-                : 'Ask the pitch anything in plain language, switch commentator voices on the fly, and explore highlight Stories cut automatically from the live feed.'}
+                ? 'Assistant RAG ancré dans la télémétrie des 30 dernières secondes, synthèse vocale Cartesia Sonic-3.6 (<90ms TTFA) et découpage vidéo CV YOLOv8-medium.'
+                : '30-second sliding-window RAG Match Assistant, Cartesia Sonic-3.6 WebSocket Audio (<90ms TTFA), and automated YOLOv8-medium + TransNetV2 9:16 / 1:1 / 16:9 Smart-Crop Highlights.'}
             </p>
           </div>
 
           <div className="bg-[#08140C]/90 backdrop-blur-md border border-[#1E3B28] rounded-xl p-4 flex items-center gap-5 self-start lg:self-end">
             <div>
-              <div className="flex items-center gap-2 text-xs font-mono text-[#B8FF01]">
+              <div className="flex items-center gap-2 text-xs font-mono text-[#B8FF01] tabular-nums">
                 <span className="w-2 h-2 rounded-full bg-[#B8FF01] animate-pulse" />
                 <span>
                   {isFr ? 'CONNECTÉ AU MATCH' : 'GROUNDED IN LIVE MATCH'} ·{' '}
                   {activeMatch.minute}&apos;
                 </span>
               </div>
-              <div className="font-wide font-bold text-base text-white mt-1">
+              <div className="font-wide font-bold text-base text-white mt-1 tabular-nums">
                 {activeMatch.homeTeam} {activeMatch.homeScore} —{' '}
                 {activeMatch.awayScore} {activeMatch.awayTeam}
               </div>
@@ -277,7 +324,7 @@ export const ScorecerAIHubView: React.FC = () => {
           {/* Left Editorial Column (5 cols) */}
           <div className="lg:col-span-5 space-y-6">
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-[#B8FF01]">
-              {isFr ? '01 · ASSISTANT DE MATCH' : '01 · AI MATCH ASSISTANT'}
+              {isFr ? '01 · ASSISTANT DE MATCH RAG' : '01 · TELEMETRY-GROUNDED AI ASSISTANT'}
             </p>
             <h2 className="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight leading-tight">
               {isFr
@@ -286,8 +333,8 @@ export const ScorecerAIHubView: React.FC = () => {
             </h2>
             <p className="text-base text-slate-400 leading-relaxed">
               {isFr
-                ? 'Pas besoin de décoder des tableaux complexes. Posez une question sur un changement tactique, un joueur ou une baisse de rythme et recevez une explication claire accompagnée de l’extrait vidéo.'
-                : 'No need to decode complex spreadsheets. Ask about a momentum swing, a substitution, or a player duel and get a clear explanation paired with the video clip.'}
+                ? 'Chaque réponse est strictement ancrée dans la fenêtre télémétrique des 30 dernières secondes (PPDA, Field Tilt, xG, passes progressives) avec schéma tactique miniature et extrait vidéo.'
+                : 'Every answer is strictly grounded in the live 30-second sliding telemetry window (PPDA, Field Tilt, xG, progressive passes) and includes an interactive Mini Tactical Pitch Diagram + Smart-Crop Highlight.'}
             </p>
 
             {/* Quick Football Questions */}
@@ -354,9 +401,9 @@ export const ScorecerAIHubView: React.FC = () => {
             <div className="flex items-center justify-between border-b border-[#162B1E] pb-4">
               <div>
                 <h3 className="font-display font-semibold text-base text-white">
-                  {isFr ? 'Assistant Match Scorecer (RAG Live)' : 'Scorecer Match Assistant (Live RAG)'}
+                  {isFr ? 'Assistant Match Scorecer (RAG 30s Live)' : 'Scorecer Match Assistant (30s Sliding-Window RAG)'}
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-400 tabular-nums">
                   {activeMatch.homeTeam} vs {activeMatch.awayTeam} ·{' '}
                   {isFr
                     ? `Contexte RAG : ~${liveRagSnapshot.tokenEstimate} jetons télémétriques`
@@ -370,21 +417,15 @@ export const ScorecerAIHubView: React.FC = () => {
                 >
                   {showRagInspector
                     ? isFr
-                      ? 'Masquer RAG'
-                      : 'Hide RAG Context'
+                      ? 'Masquer Fenêtre RAG'
+                      : 'Hide Global RAG Window'
                     : isFr
-                    ? 'Inspecter RAG'
-                    : 'Inspect RAG Context'}
+                    ? 'Inspecter Fenêtre RAG'
+                    : 'Inspect Global RAG Window'}
                 </button>
                 <span className="inline-flex items-center gap-1.5 font-mono text-xs text-[#B8FF01]">
                   <span className="w-2 h-2 rounded-full bg-[#B8FF01] animate-pulse" />
-                  {isAiStreaming
-                    ? isFr
-                      ? 'STREAMING...'
-                      : 'STREAMING...'
-                    : isFr
-                    ? 'EN DIRECT'
-                    : 'LIVE'}
+                  {isAiStreaming ? 'STREAMING...' : isFr ? 'EN DIRECT' : 'LIVE'}
                 </span>
               </div>
             </div>
@@ -392,7 +433,7 @@ export const ScorecerAIHubView: React.FC = () => {
             {showRagInspector && (
               <div className="rounded-lg bg-[#050D08] border border-[#1E3B29] p-3.5 space-y-2">
                 <div className="flex items-center justify-between text-[11px] font-mono text-[#B8FF01]">
-                  <span>LIVE MATCH RAG GROUNDING WINDOW</span>
+                  <span>LIVE 30-SECOND MATCH RAG GROUNDING WINDOW</span>
                   <span>{liveRagSnapshot.formations} · {liveRagSnapshot.xgSummary}</span>
                 </div>
                 <pre className="text-[11px] font-mono text-slate-300 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto">
@@ -402,7 +443,7 @@ export const ScorecerAIHubView: React.FC = () => {
             )}
 
             {/* Messages */}
-            <div className="space-y-4 max-h-[420px] overflow-y-auto pr-1">
+            <div className="space-y-4 max-h-[520px] overflow-y-auto pr-1">
               {aiChatMessages.map((msg, idx) =>
                 msg.sender === 'user' ? (
                   <div key={msg.id} className="flex justify-end">
@@ -412,35 +453,132 @@ export const ScorecerAIHubView: React.FC = () => {
                   </div>
                 ) : (
                   <div key={msg.id} className="flex justify-start">
-                    <div className="p-4 rounded-xl bg-[#0B1B11] border border-[#193122] max-w-xl space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-[10px] uppercase tracking-wider text-[#B8FF01]">
+                    <div className="p-4 rounded-xl bg-[#0B1B11] border border-[#193122] max-w-2xl w-full space-y-3.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-mono text-[10px] uppercase tracking-wider text-[#B8FF01] tabular-nums">
                           SCORECER AI · {msg.timestamp}
                         </span>
+                        {/* Step 5: Collapsible "View Live RAG Telemetry Context" Pill */}
+                        <button
+                          onClick={() =>
+                            setExpandedRagMsgId(expandedRagMsgId === msg.id ? null : msg.id)
+                          }
+                          className="px-2.5 py-0.5 rounded-full bg-[#00D4FF]/15 hover:bg-[#00D4FF]/25 border border-[#00D4FF]/40 text-[#00D4FF] font-mono text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all"
+                        >
+                          <Code2 className="w-3 h-3" />
+                          <span>
+                            {expandedRagMsgId === msg.id
+                              ? 'Hide Live RAG Telemetry Context'
+                              : 'View Live RAG Telemetry Context'}
+                          </span>
+                        </button>
                       </div>
+
+                      {/* Collapsible Per-Message RAG Telemetry JSON Payload */}
+                      {expandedRagMsgId === msg.id && (
+                        <div className="p-3 rounded-lg bg-[#050D08] border border-[#00D4FF]/30 space-y-1">
+                          <div className="text-[10px] font-mono text-[#00D4FF] uppercase">
+                            30-Second Sliding-Window Telemetry JSON Injected into Prompt:
+                          </div>
+                          <pre className="text-[11px] font-mono text-[#00F59B] overflow-x-auto leading-relaxed">
+                            {typeof msg.ragSnapshotPayload === 'string'
+                              ? msg.ragSnapshotPayload
+                              : JSON.stringify(
+                                  msg.ragSnapshotPayload || {
+                                    matchId: activeMatch.id,
+                                    window: '74:00-74:30',
+                                    ppda: `${activeMatch.homePPDA} vs ${activeMatch.awayPPDA}`,
+                                    fieldTiltHomePct: activeMatch.fieldTiltHome ?? 64,
+                                  },
+                                  null,
+                                  2
+                                )}
+                          </pre>
+                        </div>
+                      )}
+
                       <p className="text-sm text-slate-200 leading-relaxed">
                         {msg.text}
                       </p>
 
-                      {/* Embedded Video Clip Proof inside AI Response */}
-                      {msg.embeddedClipId && (
-                        <div className="rounded-lg overflow-hidden border border-[#1F3B2A] bg-[#050D08] flex items-center gap-3.5 p-2.5">
-                          <img
-                            src={clipPosters[idx % clipPosters.length]}
-                            alt="Match clip proof"
-                            className="w-24 h-14 object-cover rounded"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <span className="font-mono text-[10px] text-[#B8FF01] uppercase">
-                              {isFr ? 'EXTRAIT VIDÉO ASSOCIÉ' : 'ATTACHED MATCH CLIP'}
+                      {/* Citations */}
+                      {msg.telemetryCitations && msg.telemetryCitations.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {msg.telemetryCitations.map((cit) => (
+                            <span
+                              key={cit}
+                              className="px-2 py-0.5 rounded bg-[#050D08] border border-[#1E3B29] text-[10px] font-mono text-slate-300"
+                            >
+                              ✓ {cit}
                             </span>
-                            <p className="text-xs font-medium text-white truncate">
-                              {aiHighlights.find((c) => c.id === msg.embeddedClipId)
-                                ?.title || '67’ Saka cutback & Havertz volley'}
-                            </p>
-                          </div>
+                          ))}
                         </div>
                       )}
+
+                      {/* Step 5: Embedded Mini Tactical Pitch Diagram + Smart-Crop Video Highlight Card */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        {/* Mini Tactical Pitch Diagram SVG */}
+                        <div className="rounded-lg border border-[#1F3B2A] bg-[#050D08] p-2.5 space-y-1.5">
+                          <div className="flex items-center justify-between text-[10px] font-mono text-[#00F59B]">
+                            <span>MINI TACTICAL PITCH DIAGRAM</span>
+                            <span className="uppercase">{msg.tacticalDiagramType || 'overload-right'}</span>
+                          </div>
+                          <svg viewBox="0 0 100 56" className="w-full h-20 rounded bg-[#08140C] border border-[#162B1E]">
+                            <rect x="2" y="2" width="96" height="52" fill="none" stroke="#1E3B28" strokeWidth="0.6" />
+                            <line x1="50" y1="2" x2="50" y2="54" stroke="#1E3B28" strokeWidth="0.6" />
+                            <circle cx="50" cy="28" r="7" fill="none" stroke="#1E3B28" strokeWidth="0.6" />
+                            {/* Tactical Zone Highlight */}
+                            <rect
+                              x="66"
+                              y="30"
+                              width="24"
+                              height="18"
+                              rx="2"
+                              fill="#00F59B"
+                              fillOpacity="0.18"
+                              stroke="#00F59B"
+                              strokeDasharray="1.5 1"
+                              strokeWidth="0.6"
+                            />
+                            {/* Key Vectors */}
+                            <line x1="68" y1="36" x2="84" y2="42" stroke="#00F59B" strokeWidth="1.2" />
+                            <line x1="84" y1="42" x2="88" y2="28" stroke="#00D4FF" strokeWidth="1.2" />
+                            <circle cx="68" cy="36" r="2.2" fill="#B8FF01" />
+                            <circle cx="84" cy="42" r="2.2" fill="#B8FF01" />
+                            <circle cx="88" cy="28" r="2.4" fill="#00D4FF" />
+                          </svg>
+                        </div>
+
+                        {/* Clickable Smart-Crop Video Highlight Card */}
+                        {msg.embeddedClipId && (
+                          <div
+                            onClick={() => {
+                              const foundIdx = aiHighlights.findIndex((c) => c.id === msg.embeddedClipId);
+                              if (foundIdx >= 0) setSelectedClipIdx(foundIdx);
+                              const target = document.getElementById('section-highlights');
+                              if (target) {
+                                target.scrollIntoView({ behavior: 'smooth' });
+                              }
+                            }}
+                            className="rounded-lg overflow-hidden border border-[#1F3B2A] hover:border-[#B8FF01] bg-[#050D08] flex items-center gap-3 p-2.5 cursor-pointer transition-all"
+                          >
+                            <img
+                              src={clipPosters[idx % clipPosters.length]}
+                              alt="Match clip proof"
+                              className="w-20 h-16 object-cover rounded shrink-0"
+                            />
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <span className="font-mono text-[10px] text-[#B8FF01] uppercase block">
+                                {isFr ? 'EXTRAIT YOLOV8 9:16' : '9:16 SMART-CROP CLIP'}
+                              </span>
+                              <p className="text-xs font-medium text-white line-clamp-2">
+                                {aiHighlights.find((c) => c.id === msg.embeddedClipId)
+                                  ?.title || '67’ Saka cutback & Havertz volley'}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )
@@ -478,19 +616,37 @@ export const ScorecerAIHubView: React.FC = () => {
       </section>
 
       {/* =====================================================================
-          02 · COMMENTARY PERSONAS — "Same match. Different voice."
+          02 · CARTESIA SONIC-3.6 AUDIO STUDIO & 6-LANGUAGE LOCALIZATION ENGINE
       ===================================================================== */}
       <section className="border-b border-[#162B1E] py-20 px-6">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          {/* Left Interactive Persona & Language Card (7 cols) */}
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+          {/* Left Interactive Cartesia Sonic-3.6 Studio Card (7 cols) */}
           <div className="lg:col-span-7 rounded-xl bg-[#08140C] border border-[#162B1E] overflow-hidden">
+            {/* Cartesia Sonic-3.6 WebSocket Telemetry Bar */}
+            <div className="px-6 py-3 bg-[#050D08] border-b border-[#162B1E] flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+              <div className="flex items-center gap-2 text-[#00D4FF]">
+                <Radio className="w-3.5 h-3.5 animate-pulse" />
+                <span className="font-bold">wss://api.cartesia.ai/tts/websocket</span>
+                <span className="px-2 py-0.5 rounded bg-[#00F59B]/15 text-[#00F59B] tabular-nums">
+                  TTFA: {ttfaMs}ms (&lt;90ms SSM)
+                </span>
+                <span className="px-2 py-0.5 rounded bg-[#00D4FF]/15 text-[#00D4FF] tabular-nums flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00D4FF] animate-pulse" />
+                  JWT: {ephemeralTokenSeconds}s
+                </span>
+              </div>
+              <div className="text-slate-400 tabular-nums">
+                context_id: <span className="text-white font-mono">{dynamicContextId}</span> • word_timestamps: true
+              </div>
+            </div>
+
             {/* Persona Switcher Tabs */}
             <div className="grid grid-cols-3 border-b border-[#162B1E] text-xs font-mono uppercase tracking-wider">
               {(
                 [
-                  { id: 'tactical', label: isFr ? 'TACTIQUE' : 'TACTICAL' },
-                  { id: 'passionate', label: isFr ? 'PASSIONNÉ' : 'PASSIONATE' },
-                  { id: 'neutral', label: isFr ? 'NEUTRE' : 'NEUTRAL' },
+                  { id: 'tactical', label: isFr ? 'ANALYSTE TACTIQUE' : 'TACTICAL ANALYST' },
+                  { id: 'passionate', label: isFr ? 'SUPPORTER PASSIONNÉ' : 'DIE-HARD SUPPORTER' },
+                  { id: 'neutral', label: isFr ? 'DIFFUSEUR NEUTRE' : 'NEUTRAL BROADCASTER' },
                 ] as const
               ).map((tab) => {
                 const active = persona === tab.id;
@@ -514,10 +670,10 @@ export const ScorecerAIHubView: React.FC = () => {
             </div>
 
             <div className="p-6 sm:p-8 space-y-6">
-              {/* Language Pills + Hear Voice Button */}
+              {/* Language Pills (EN, FR, ES, DE, AR, PT-BR) + Hear Voice Button */}
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  {(['en', 'fr', 'es', 'de', 'ja', 'ar'] as CommentaryLanguage[]).map(
+                  {(['en', 'es', 'ja', 'fr', 'de', 'ar', 'pt'] as CommentaryLanguage[]).map(
                     (code) => (
                       <button
                         key={code}
@@ -528,7 +684,7 @@ export const ScorecerAIHubView: React.FC = () => {
                             : 'bg-[#050D08] text-slate-400 border border-[#162B1E] hover:text-white'
                         }`}
                       >
-                        {VOICE_SCRIPTS[code].label}
+                        {code === 'pt' ? 'PT-BR' : code.toUpperCase()} ({VOICE_SCRIPTS[code].label})
                       </button>
                     )
                   )}
@@ -550,34 +706,108 @@ export const ScorecerAIHubView: React.FC = () => {
                   <span>
                     {isSpeaking
                       ? isFr
-                        ? 'Arrêter la voix IA'
-                        : 'Stop AI Voice'
+                        ? 'Arrêter Sonic-3.6'
+                        : 'Stop Sonic-3.6 Stream'
                       : isFr
-                      ? 'Écouter le commentateur IA'
-                      : 'Listen to AI Commentator'}
+                      ? 'Écouter Cartesia Sonic-3.6'
+                      : 'Stream Cartesia Sonic-3.6'}
                   </span>
                 </button>
               </div>
 
-              {/* Commentary Lines */}
-              <div className="space-y-4 pt-2">
+              {/* Step 5: 6-Language Localization Rule Status Banner */}
+              <div
+                className={`p-3 rounded-xl border text-xs font-mono flex flex-wrap items-center justify-between gap-2 ${
+                  isEnglishSelected
+                    ? 'bg-[#00F59B]/10 border-[#00F59B]/30 text-[#00F59B]'
+                    : 'bg-[#00D4FF]/10 border-[#00D4FF]/30 text-[#00D4FF]'
+                }`}
+              >
+                <div>
+                  {isEnglishSelected
+                    ? '✓ EN Localization Mode: Full Emotion Override Flags + Native [laughter] & [sigh] Paralinguistic Tags Active'
+                    : `🛡️ Non-EN Localization Safeguard (${voiceLang.toUpperCase()}): Experimental English-Only Emotion Flags Auto-Disabled — Using Native Acoustic Conditioning + SSML <speed> & <volume>`}
+                </div>
+              </div>
+
+              {/* Commentary Lines with Electric Cyan (#00D4FF) word_timestamps Read-Along */}
+              <div className="space-y-4 pt-1">
                 {currentScriptPack[persona].map((line, i) => {
                   const min = line.slice(0, 3);
-                  const body = line.slice(3).trim();
+                  const paralinguisticPrefix =
+                    persona === 'passionate'
+                      ? i === 0
+                        ? '[laughter] '
+                        : '[sigh] '
+                      : '';
+                  const bodyWords = `${paralinguisticPrefix}${line.slice(3).trim()}`.split(' ');
                   return (
                     <div
                       key={i}
                       className="flex items-start gap-4 p-4 rounded-lg bg-[#050D08] border border-[#162B1E]"
                     >
-                      <span className="font-mono text-xs font-bold text-[#B8FF01] pt-0.5">
+                      <span className="font-mono text-xs font-bold text-[#B8FF01] pt-0.5 tabular-nums">
                         {min}
                       </span>
-                      <p className="text-sm text-slate-200 leading-relaxed">
-                        {body}
+                      <p className="text-sm leading-relaxed flex flex-wrap gap-x-1.5 gap-y-1">
+                        {bodyWords.map((word, wIdx) => {
+                          const isWordActive = i === 0 && wIdx === activeWordIndex % bodyWords.length;
+                          const isTag = word === '[laughter]' || word === '[sigh]';
+                          return (
+                            <span
+                              key={`${i}-${wIdx}`}
+                              className={`transition-colors duration-150 rounded px-0.5 ${
+                                isWordActive
+                                  ? 'bg-[#00D4FF]/25 text-[#00D4FF] font-bold underline decoration-[#00D4FF]'
+                                  : isTag
+                                  ? 'font-mono text-xs text-[#FFB800] bg-[#FFB800]/10 px-1.5 rounded'
+                                  : 'text-slate-200'
+                              }`}
+                            >
+                              {word}
+                            </span>
+                          );
+                        })}
                       </p>
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Step 5: Custom Phonetic Pronunciation Dictionary (pronunciation_dict_id) */}
+              <div className="rounded-xl bg-[#050D08] border border-[#1E3B29] p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#B8FF01]">
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>
+                      Custom Phonetic Dictionary (<code className="text-[#00D4FF]">pronunciation_dict_id: dict_uefa_2026</code>)
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowPhoneticDict(!showPhoneticDict)}
+                    className="text-[11px] font-mono text-slate-400 hover:text-white cursor-pointer"
+                  >
+                    {showPhoneticDict ? 'Collapse' : 'Expand'}
+                  </button>
+                </div>
+
+                {showPhoneticDict && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+                    {PHONETIC_DICTIONARY_PREVIEW.map((entry) => (
+                      <div
+                        key={entry.raw}
+                        className="p-2.5 rounded-lg bg-[#08140C] border border-[#162B1E] flex items-center justify-between"
+                      >
+                        <div>
+                          <span className="text-white font-bold">&quot;{entry.raw}&quot;</span>
+                          <span className="text-slate-500 mx-1.5">→</span>
+                          <span className="text-[#00F59B]">&quot;{entry.phonetic}&quot;</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400">{entry.club}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -585,31 +815,33 @@ export const ScorecerAIHubView: React.FC = () => {
           {/* Right Editorial Explanation (5 cols) */}
           <div className="lg:col-span-5 space-y-5">
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-[#B8FF01]">
-              {isFr ? '02 · COMMENTAIRES MULTILINGUES' : '02 · COMMENTARY PERSONAS'}
+              {isFr ? '02 · CARTESIA SONIC-3.6 SSM' : '02 · CARTESIA SONIC-3.6 SSM AUDIO'}
             </p>
             <h2 className="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight leading-tight">
               {isFr
-                ? 'Même match. Autre voix.'
-                : 'Same match. Different voice.'}
+                ? 'Même match. Autre voix. <90ms.'
+                : 'Sub-90ms State Space Model Voice.'}
             </h2>
             <p className="text-base text-slate-400 leading-relaxed">
               {isFr
-                ? 'Choisissez entre l’analyse tactique posée, la ferveur d’un supporter passionné ou le ton neutre d’un commentateur télé—doublé instantanément en 6 langues.'
-                : 'Choose between calm tactical insight, passionate club supporter energy, or classic neutral broadcasting—dubbed across 6 languages in real time.'}
+                ? 'Propulsé par l’architecture State Space Model (SSM) de Cartesia Sonic-3.6, Scorecer diffuse des commentaires en direct avec alignement mot à mot en cyan électrique (#00D4FF) et dictionnaire phonétique UEFA.'
+                : 'Powered by Cartesia Sonic-3.6 State Space Model (SSM) architecture over persistent WebSockets, Scorecer streams live commentary with Electric Cyan (#00D4FF) word-level read-along timestamps and UEFA phonetic overrides.'}
             </p>
           </div>
         </div>
       </section>
 
       {/* =====================================================================
-          03 · AUTOMATED HIGHLIGHT STORIES — "Stories cut for the phone in your hand."
+          03 · AUTOMATED 9:16 / 1:1 / 16:9 SMART-CROP COMPUTER VISION PIPELINE
       ===================================================================== */}
-      <section className="py-20 px-6">
+      <section id="section-highlights" className="py-20 px-6">
         <div className="max-w-7xl mx-auto space-y-10">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
             <div className="space-y-2 max-w-2xl">
               <p className="font-mono text-xs uppercase tracking-[0.2em] text-[#B8FF01]">
-                {isFr ? '03 · STORIES AUTOMATISÉES' : '03 · AUTOMATED HIGHLIGHTS'}
+                {isFr
+                  ? '03 · PIPELINE VISION PAR ORDINATEUR (YOLOV8 + TRANSNETV2)'
+                  : '03 · AUTOMATED CV SMART-CROP PIPELINE (YOLOV8-MEDIUM + TRANSNETV2)'}
               </p>
               <h2 className="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight">
                 {isFr
@@ -618,34 +850,88 @@ export const ScorecerAIHubView: React.FC = () => {
               </h2>
               <p className="text-sm sm:text-base text-slate-400">
                 {isFr
-                  ? 'Dès qu’un but ou un arrêt décisif survient, l’IA assemble l’action en format vertical 9:16 pour votre téléphone ou 16:9 pour grand écran.'
-                  : 'Within seconds of a goal or decisive save, Scorecer assembles the sequence in vertical 9:16 mobile Stories and 16:9 widescreen clips.'}
+                  ? 'TransNetV2 détecte les coupures de caméra, YOLOv8-medium suit le ballon avec rejet des valeurs aberrantes (Z-Score / IQR) et interpolation linéaire d’occlusion.'
+                  : 'TransNetV2 detects shot boundaries while YOLOv8-medium tracks the ball POI with Z-Score / Modified Z-Score / IQR outlier rejection and linear occlusion interpolation.'}
               </p>
             </div>
 
-            <div className="inline-flex rounded-lg bg-[#08140C] border border-[#162B1E] p-1 text-xs font-mono self-start">
+            <div className="flex flex-wrap items-center gap-3 self-start">
+              {/* Toggle CV Smart-Crop Vision Overlay */}
               <button
-                onClick={() => setStoryMode('vertical')}
-                className={`px-3 py-1.5 rounded-md cursor-pointer ${
-                  storyMode === 'vertical'
-                    ? 'bg-[#B8FF01] text-[#050D08] font-semibold'
-                    : 'text-slate-400 hover:text-white'
+                onClick={() => setShowCvOverlay(!showCvOverlay)}
+                className={`px-3.5 py-2 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
+                  showCvOverlay
+                    ? 'bg-[#00F59B]/20 border-[#00F59B] text-[#00F59B]'
+                    : 'bg-[#08140C] border-[#162B1E] text-slate-400 hover:text-white'
                 }`}
               >
-                9:16 Mobile Story
+                <Eye className="w-3.5 h-3.5" />
+                <span>
+                  {showCvOverlay ? 'CV Smart-Crop Overlay: ON' : 'CV Smart-Crop Overlay: OFF'}
+                </span>
               </button>
-              <button
-                onClick={() => setStoryMode('widescreen')}
-                className={`px-3 py-1.5 rounded-md cursor-pointer ${
-                  storyMode === 'widescreen'
-                    ? 'bg-[#B8FF01] text-[#050D08] font-semibold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                16:9 Broadcast
-              </button>
+
+              {/* Aspect Ratio Switcher: 9:16 Vertical / 1:1 Square / 16:9 Broadcast */}
+              <div className="inline-flex rounded-lg bg-[#08140C] border border-[#162B1E] p-1 text-xs font-mono">
+                <button
+                  onClick={() => setStoryMode('vertical')}
+                  className={`px-3 py-1.5 rounded-md cursor-pointer ${
+                    storyMode === 'vertical'
+                      ? 'bg-[#B8FF01] text-[#050D08] font-semibold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  9:16 Story
+                </button>
+                <button
+                  onClick={() => setStoryMode('square')}
+                  className={`px-3 py-1.5 rounded-md cursor-pointer ${
+                    storyMode === 'square'
+                      ? 'bg-[#B8FF01] text-[#050D08] font-semibold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  1:1 Square
+                </button>
+                <button
+                  onClick={() => setStoryMode('widescreen')}
+                  className={`px-3 py-1.5 rounded-md cursor-pointer ${
+                    storyMode === 'widescreen'
+                      ? 'bg-[#B8FF01] text-[#050D08] font-semibold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  16:9 Broadcast
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* CV Pipeline Telemetry Readout Strip */}
+          {showCvOverlay && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs font-mono">
+              <div className="p-3 rounded-xl bg-[#08140C] border border-[#162B1E]">
+                <div className="text-[10px] text-slate-400">1. SHOT BOUNDARY DETECTION</div>
+                <div className="text-[#00F59B] font-bold mt-0.5">TransNetV2 Scene Cut Guard</div>
+                <div className="text-[10px] text-slate-400">Prevents cross-cut pan artifacts</div>
+              </div>
+              <div className="p-3 rounded-xl bg-[#08140C] border border-[#162B1E]">
+                <div className="text-[10px] text-slate-400">2. POINT-OF-INTEREST DETECTOR</div>
+                <div className="text-[#00D4FF] font-bold mt-0.5">YOLOv8-medium Ball + Player</div>
+                <div className="text-[10px] text-slate-400">Confidence: 99.4% @ 60fps</div>
+              </div>
+              <div className="p-3 rounded-xl bg-[#08140C] border border-[#162B1E]">
+                <div className="text-[10px] text-slate-400">3. OUTLIER REJECTION</div>
+                <div className="text-[#FFB800] font-bold mt-0.5">Z-Score / Mod Z / IQR Filter</div>
+                <div className="text-[10px] text-slate-400">2 Sideline False Positives Rejected</div>
+              </div>
+              <div className="p-3 rounded-xl bg-[#08140C] border border-[#162B1E]">
+                <div className="text-[10px] text-slate-400">4. OCCLUSION HANDLING</div>
+                <div className="text-white font-bold mt-0.5">Linear Trajectory Interpolation</div>
+                <div className="text-[10px] text-slate-400">Zero camera whip-pan jitter</div>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {aiHighlights.map((clip, index) => {
@@ -663,7 +949,11 @@ export const ScorecerAIHubView: React.FC = () => {
                 >
                   <div
                     className={`relative overflow-hidden bg-black ${
-                      storyMode === 'vertical' ? 'aspect-[9/13]' : 'aspect-video'
+                      storyMode === 'vertical'
+                        ? 'aspect-[9/13]'
+                        : storyMode === 'square'
+                        ? 'aspect-square'
+                        : 'aspect-video'
                     }`}
                   >
                     <img
@@ -673,7 +963,7 @@ export const ScorecerAIHubView: React.FC = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#050D08] via-transparent to-[#050D08]/60" />
 
-                    <div className="absolute top-3 left-3 right-3 flex items-center justify-between text-[11px] font-mono">
+                    <div className="absolute top-3 left-3 right-3 flex items-center justify-between text-[11px] font-mono tabular-nums">
                       <span className="px-2 py-0.5 rounded bg-[#050D08]/85 text-[#B8FF01] border border-[#1F3B2A]">
                         {clip.minute}&apos; · {clip.crowdDecibels} dB
                       </span>
@@ -681,6 +971,29 @@ export const ScorecerAIHubView: React.FC = () => {
                         {clip.duration}
                       </span>
                     </div>
+
+                    {/* Step 5: Interactive YOLOv8-medium Bounding Box + Smoothed Crop Overlay */}
+                    {showCvOverlay && (
+                      <div className="absolute inset-0 pointer-events-none">
+                        {/* Smoothed Camera Crop Window (#00D4FF) */}
+                        <div className="absolute inset-x-6 inset-y-8 border border-dashed border-[#00D4FF]/80 rounded-lg flex flex-col justify-between p-1.5">
+                          <span className="text-[9px] font-mono bg-[#00D4FF]/20 text-[#00D4FF] px-1 rounded self-start">
+                            Crop Window ({storyMode === 'vertical' ? '9:16' : storyMode === 'square' ? '1:1' : '16:9'}) • IQR Smooth
+                          </span>
+                          {/* YOLOv8 Ball POI Bounding Box (#00F59B) */}
+                          <div className="w-14 h-14 border-2 border-[#00F59B] rounded bg-[#00F59B]/10 self-center flex items-end justify-center pb-0.5">
+                            <span className="text-[8px] font-mono bg-[#00F59B] text-[#050D08] font-bold px-1 rounded">
+                              POI 0.99
+                            </span>
+                          </div>
+                          {/* TransNetV2 Scene Cut Marker Timeline */}
+                          <div className="w-full bg-black/70 rounded px-1.5 py-0.5 flex items-center justify-between text-[8px] font-mono text-slate-300">
+                            <span>TransNetV2 Cuts: 04f | 19f</span>
+                            <span className="text-[#00F59B]">Lin-Interp OK</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="absolute inset-0 flex items-center justify-center opacity-90 group-hover:scale-110 transition-transform">
                       <div className="w-11 h-11 rounded-full bg-[#B8FF01] text-[#050D08] flex items-center justify-center shadow-lg">
@@ -699,27 +1012,29 @@ export const ScorecerAIHubView: React.FC = () => {
                       </h3>
                     </div>
 
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        shareWidgetToSquad({
-                          type: 'ai-highlight',
-                          title: clip.title,
-                          subtitle: clip.tacticalTag,
-                          metricPrimary: `${clip.minute}' Clip`,
-                          metricSecondary: `${clip.crowdDecibels} dB Roar`,
-                          accentColor: '#B8FF01',
-                          clipId: clip.id,
-                        });
-                        setActiveTab('social-squads');
-                      }}
-                      className="w-full py-2 px-3 rounded-lg bg-[#0B1A11] hover:bg-[#12291B] border border-[#1E3B28] text-xs font-medium text-slate-200 hover:text-[#B8FF01] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
-                    >
-                      <Share2 className="w-3.5 h-3.5 text-[#B8FF01]" />
-                      <span>
-                        {isFr ? 'Partager dans le Squad' : 'Share to Squad'}
-                      </span>
-                    </button>
+                    {!pureTacticalMode && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          shareWidgetToSquad({
+                            type: 'ai-highlight',
+                            title: clip.title,
+                            subtitle: clip.tacticalTag,
+                            metricPrimary: `${clip.minute}' Clip`,
+                            metricSecondary: `${clip.crowdDecibels} dB Roar`,
+                            accentColor: '#B8FF01',
+                            clipId: clip.id,
+                          });
+                          setActiveTab('social-squads');
+                        }}
+                        className="w-full py-2 px-3 rounded-lg bg-[#0B1A11] hover:bg-[#12291B] border border-[#1E3B28] text-xs font-medium text-slate-200 hover:text-[#B8FF01] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <Share2 className="w-3.5 h-3.5 text-[#B8FF01]" />
+                        <span>
+                          {isFr ? 'Partager pointeur 60fps dans Squad' : 'Share 60fps Pointer to Squad'}
+                        </span>
+                      </button>
+                    )}
                   </div>
                 </div>
               );

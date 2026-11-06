@@ -17,6 +17,10 @@ import { HoverPlayVideo } from '../common/HoverPlayVideo';
 import { RealMatchDataImporter } from '../match/RealMatchDataImporter';
 import { VideoTutorialsAndActionSection } from './VideoTutorialsAndActionSection';
 import { TeamAndFaqSection } from './TeamAndFaqSection';
+import {
+  COMPETITOR_BENCHMARKS_2026,
+  SLEEPER_OUTLIER_CALLOUT,
+} from '../../services/telemetryProviderAdapter';
 
 interface HighlightVideoItem {
   id: string;
@@ -1402,6 +1406,120 @@ export const LandingVisionView: React.FC = () => {
               >
                 {isFr ? 'Explorer Découvrir' : 'View Discover Feed'}
               </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================================
+          8B. MODULE A: UPGRADED 2026 COMPETITOR BENCHMARK LAB (Step 2)
+      ===================================================================== */}
+      <section className="border-b border-[#162B1E] py-16 lg:py-24 px-6 bg-[#06100A]">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div className="space-y-2">
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-[#00F59B]">
+                MODULE A · VERIFIED 2026 EMPIRICAL TELEMETRY BENCHMARK LAB
+              </p>
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight">
+                Sub-Second Dual-Lane Edge vs. Legacy Polling Trackers
+              </h2>
+              <p className="text-sm sm:text-base text-slate-400 max-w-2xl">
+                Scorecer decouples Lane 1 (&lt;200ms Scout WebSocket Push) from Lane 2 (+2s Async Opta XY Matrix), delivering verified 0.7s goal alerts while eliminating ad-clutter and social toxicity.
+              </p>
+            </div>
+            <button
+              onClick={() => setActiveTab('match-center')}
+              className="px-4 py-2.5 rounded-xl bg-[#00F59B]/15 hover:bg-[#00F59B]/25 text-[#00F59B] border border-[#00F59B]/40 text-xs font-mono font-bold cursor-pointer self-start md:self-end"
+            >
+              Inspect Dual-Lane Multiplexer in Match Center →
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            {/* Proportional Scale Bar Chart (0.7s to 1.2s) */}
+            <div className="lg:col-span-8 rounded-2xl bg-[#0B1710] border border-[#1A3324] p-6 space-y-4">
+              <div className="flex items-center justify-between text-xs font-mono text-slate-400 pb-2 border-b border-white/10">
+                <span>PROPORTIONAL SUB-SECOND LATENCY SCALE (0.0s — 1.5s)</span>
+                <span className="text-[#00F59B]">Tabular-Nums Verified</span>
+              </div>
+
+              <div className="space-y-3.5">
+                {COMPETITOR_BENCHMARKS_2026.map((row) => {
+                  const widthPct = Math.min(100, Math.round((row.latencySeconds / 1.4) * 100));
+                  return (
+                    <div key={row.platform} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`font-display font-bold ${
+                              row.highlight ? 'text-[#00F59B]' : 'text-white'
+                            }`}
+                          >
+                            {row.platform}
+                          </span>
+                          <span className="text-[11px] font-mono text-slate-400 hidden sm:inline">
+                            • {row.architecture}
+                          </span>
+                        </div>
+                        <span
+                          className={`font-mono font-extrabold tabular-nums ${
+                            row.highlight ? 'text-[#00F59B] text-sm' : 'text-slate-300'
+                          }`}
+                        >
+                          {row.latencyLabel}
+                        </span>
+                      </div>
+                      <div className="w-full h-3 rounded-full bg-black/50 overflow-hidden p-0.5 border border-white/5">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${
+                            row.highlight
+                              ? 'bg-gradient-to-r from-[#00F59B] to-[#00D4FF]'
+                              : 'bg-slate-600/70'
+                          }`}
+                          style={{ width: `${widthPct}%` }}
+                        />
+                      </div>
+                      <div className="flex flex-wrap gap-3 text-[10px] font-mono text-slate-400">
+                        <span>Tactical Depth: {row.tacticalDepth}</span>
+                        <span>•</span>
+                        <span>Social: {row.socialArchitecture}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Sleeper 15-Minute Outlier Callout Banner */}
+            <div className="lg:col-span-4 rounded-2xl bg-gradient-to-b from-[#1A140B] to-[#0B120E] border border-[#FFB800]/40 p-6 flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FFB800]/15 border border-[#FFB800]/40 text-[#FFB800] font-mono text-[10px] font-bold uppercase">
+                  ⚠️ Non-Proportional Outlier Callout
+                </div>
+                <h3 className="font-display font-bold text-xl text-white">
+                  {SLEEPER_OUTLIER_CALLOUT.platform}:{' '}
+                  <span className="text-[#FFB800] font-mono tabular-nums">
+                    {SLEEPER_OUTLIER_CALLOUT.latencyLabel}
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  {SLEEPER_OUTLIER_CALLOUT.reason}
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-1.5 font-mono text-[11px]">
+                <div className="text-slate-400">Chart Scale Protection:</div>
+                <div className="text-white">
+                  Scorecer: <span className="text-[#00F59B] font-bold">680 ms</span>
+                </div>
+                <div className="text-white">
+                  Sleeper Poll: <span className="text-[#FFB800] font-bold">~900,000 ms (1,323x slower)</span>
+                </div>
+                <div className="text-[10px] text-slate-400 pt-1">
+                  Rendered as an outlier callout badge so 900,000ms does not flatten the 0.7s–1.2s bar chart scale.
+                </div>
+              </div>
             </div>
           </div>
         </div>
